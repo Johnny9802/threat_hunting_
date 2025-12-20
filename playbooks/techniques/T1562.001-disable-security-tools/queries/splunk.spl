@@ -1,0 +1,22 @@
+`comment("=== PB-T1562-001 - Security Tools Disabled Detection ===")`
+`comment("MITRE ATT&CK: T1562.001 - defense-evasion")`
+
+`comment("Windows Defender Disabled")`
+index=windows sourcetype=WinEventLog:Microsoft-Windows-Windows*Defender* EventCode=5001
+| table _time, ComputerName
+
+`comment("Security Service Stopped")`
+index=windows sourcetype=WinEventLog:System EventCode=7036
+| where Message LIKE "%Windows Defender%" OR Message LIKE "%McAfee%" OR Message LIKE "%Symantec%" OR Message LIKE "%CrowdStrike%" OR Message LIKE "%Carbon Black%" OR Message LIKE "%SentinelOne%"
+| where Message LIKE "%stopped%"
+| table _time, ComputerName, Message
+
+`comment("Firewall Disabled via netsh")`
+index=sysmon EventCode=1 Image="*\netsh.exe"
+| where CommandLine LIKE "%firewall%set%state%off%" OR CommandLine LIKE "%advfirewall%set%state%off%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("Tamper Protection Disabled via Registry")`
+index=sysmon EventCode=13
+| where TargetObject LIKE "%Windows Defender%TamperProtection%" AND Details="DWORD (0x00000000)"
+| table _time, ComputerName, User, TargetObject

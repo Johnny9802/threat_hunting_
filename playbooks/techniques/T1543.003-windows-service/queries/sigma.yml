@@ -1,0 +1,21 @@
+title: New Windows Service Created
+id: k1234567-service-create-001
+status: production
+level: medium
+logsource:
+    product: windows
+    service: system
+detection:
+    selection:
+        EventID: 7045
+    suspicious_path:
+        ImagePath|contains:
+            - '\Temp\'
+            - '\AppData\'
+            - 'powershell'
+            - 'cmd /c'
+            - '.ps1'
+    condition: selection and suspicious_path
+tags:
+    - attack.persistence
+    - attack.t1543.003

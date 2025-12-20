@@ -1,0 +1,19 @@
+`comment("=== PB-T1059-003 - Windows Command Shell Abuse Detection ===")`
+`comment("MITRE ATT&CK: T1059.003 - execution")`
+
+`comment("Suspicious CMD Parent Process")`
+index=sysmon EventCode=1 Image="*\cmd.exe"
+| rex field=ParentImage "(?<parent_name>[^\\]+)$"
+| where parent_name IN ("outlook.exe", "winword.exe", "excel.exe", "powerpnt.exe", "wmiprvse.exe", "mshta.exe", "wscript.exe", "cscript.exe")
+| table _time, ComputerName, User, ParentImage, CommandLine
+
+`comment("CMD Reconnaissance Commands")`
+index=sysmon EventCode=1 Image="*\cmd.exe"
+| rex field=CommandLine "(?<recon_cmd>whoami|net user|net group|ipconfig|systeminfo|tasklist|qprocess|query user|net localgroup|net share)"
+| where isnotnull(recon_cmd)
+| stats count values(recon_cmd) as commands by ComputerName, User, ParentImage
+
+`comment("CMD Download Cradles")`
+index=sysmon EventCode=1 Image="*\cmd.exe"
+| where CommandLine LIKE "%curl%" OR CommandLine LIKE "%wget%" OR CommandLine LIKE "%certutil%" OR CommandLine LIKE "%bitsadmin%"
+| table _time, ComputerName, User, CommandLine

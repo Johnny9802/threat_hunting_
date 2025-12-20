@@ -1,0 +1,47 @@
+id: PB-T1110-001
+name: "Password Guessing and Brute Force Detection"
+description: "Detect password guessing attacks against various authentication mechanisms"
+
+mitre:
+  technique: T1110.001
+  tactic: credential-access
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Authentication Logs
+  - VPN Logs
+  - SSH Logs
+
+hunt_hypothesis: |
+  Password attacks include:
+  1. Brute force against single account
+  2. Credential stuffing
+  3. Dictionary attacks
+  4. Reverse brute force
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify targeted accounts
+  - Check if any attempts were successful
+  - Block source IP if malicious
+  - Force password reset if compromised
+
+false_positives:
+  - Forgotten passwords
+  - Service account issues
+  - Account lockouts
+
+references:
+  - https://attack.mitre.org/techniques/T1110/
+
+tags: [credential-access, brute-force, password, authentication]

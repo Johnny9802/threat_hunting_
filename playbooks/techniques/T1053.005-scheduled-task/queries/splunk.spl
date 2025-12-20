@@ -1,0 +1,23 @@
+`comment("=== PB-T1053-005 - Malicious Scheduled Task Detection ===")`
+`comment("MITRE ATT&CK: T1053.005 - persistence")`
+
+`comment("Scheduled Task Creation")`
+index=sysmon EventCode=1 (Image="*\schtasks.exe")
+| where CommandLine LIKE "%/create%"
+| rex field=CommandLine "/tn\s+(?<task_name>[^\s/]+)"
+| rex field=CommandLine "/tr\s+(?<task_command>.+?)(?:/|$)"
+| table _time, ComputerName, User, task_name, task_command, CommandLine
+
+`comment("Suspicious Task Locations")`
+index=sysmon EventCode=1 (Image="*\schtasks.exe") CommandLine="*/create*"
+| where CommandLine LIKE "%\AppData\%" OR CommandLine LIKE "%\Temp\%" OR CommandLine LIKE "%\ProgramData\%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("Encoded Commands in Scheduled Tasks")`
+index=sysmon EventCode=1 (Image="*\schtasks.exe")
+| where CommandLine LIKE "%-enc%" OR CommandLine LIKE "%base64%" OR CommandLine LIKE "%FromBase64String%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("Task Scheduler Event Log")`
+index=windows sourcetype=WinEventLog:Microsoft-Windows-TaskScheduler/Operational EventCode=106
+| table _time, TaskName, UserContext

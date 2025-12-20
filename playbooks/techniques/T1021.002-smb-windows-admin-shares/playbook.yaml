@@ -1,0 +1,46 @@
+id: PB-T1021-002
+name: "SMB/Windows Admin Shares Lateral Movement Detection"
+description: "Detect lateral movement via SMB admin shares (C$, ADMIN$, IPC$)"
+
+mitre:
+  technique: T1021.002
+  tactic: lateral-movement
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Sysmon
+  - Network Traffic
+
+hunt_hypothesis: |
+  Admin shares used for:
+  1. File copy for execution
+  2. Remote code execution
+  3. Tool deployment
+  4. Data exfiltration
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Verify if access is authorized
+  - Check what was copied or executed
+  - Review source host for compromise indicators
+  - Check for subsequent execution
+
+false_positives:
+  - IT administration
+  - SCCM deployments
+  - Backup solutions
+
+references:
+  - https://attack.mitre.org/techniques/T1021/
+
+tags: [lateral-movement, smb, admin-shares, psexec]

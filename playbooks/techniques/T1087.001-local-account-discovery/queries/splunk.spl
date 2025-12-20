@@ -1,0 +1,23 @@
+`comment("=== PB-T1087-001 - Account Discovery Detection ===")`
+`comment("MITRE ATT&CK: T1087.001 - discovery")`
+
+`comment("Net User Commands")`
+index=sysmon EventCode=1 (Image="*\net.exe" OR Image="*\net1.exe")
+| where CommandLine LIKE "%user%" OR CommandLine LIKE "%localgroup%" OR CommandLine LIKE "%group%"
+| table _time, ComputerName, User, Image, CommandLine
+
+`comment("PowerShell AD Enumeration")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| where CommandLine LIKE "%Get-ADUser%" OR CommandLine LIKE "%Get-ADGroupMember%" OR CommandLine LIKE "%Get-LocalUser%" OR CommandLine LIKE "%Get-LocalGroupMember%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("LDAP Enumeration")`
+index=windows sourcetype=windows:security EventCode=4662
+| where ObjectType="user" AND AccessMask="0x100"
+| stats count by SubjectUserName, SubjectDomainName
+| where count > 50
+
+`comment("BloodHound/SharpHound Indicators")`
+index=sysmon EventCode=1
+| where CommandLine LIKE "%sharphound%" OR CommandLine LIKE "%bloodhound%" OR CommandLine LIKE "%Invoke-BloodHound%"
+| table _time, ComputerName, User, CommandLine

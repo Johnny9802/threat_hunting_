@@ -1,0 +1,46 @@
+id: PB-T1059-003
+name: "Windows Command Shell Abuse Detection"
+description: "Detect malicious use of cmd.exe including encoded commands, suspicious parent processes, and obfuscation"
+
+mitre:
+  technique: T1059.003
+  tactic: execution
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Sysmon
+  - EDR
+
+hunt_hypothesis: |
+  Adversaries abuse cmd.exe for:
+  1. Executing encoded/obfuscated commands
+  2. Running reconnaissance commands
+  3. Download and execute payloads
+  4. Persistence mechanisms
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Review parent process - is it suspicious?
+  - Decode any encoded commands
+  - Check for network connections from cmd process
+  - Review subsequent child processes
+
+false_positives:
+  - Admin scripts
+  - Software installations
+  - Legitimate automation
+
+references:
+  - https://attack.mitre.org/techniques/T1059/
+
+tags: [execution, cmd, windows, command-line]

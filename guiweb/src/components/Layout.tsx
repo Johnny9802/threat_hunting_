@@ -8,10 +8,14 @@ import {
   X,
   Search,
   Bell,
-  Settings,
+  Settings as SettingsIcon,
   Github,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import SearchModal from './SearchModal';
+import AIAssistant from './AIAssistant';
+import NotificationsPanel from './NotificationsPanel';
 
 interface LayoutProps {
   children: ReactNode;
@@ -27,10 +31,15 @@ const navItems: NavItem[] = [
   { name: 'Playbooks', path: '/', icon: BookOpen },
   { name: 'Dashboard', path: '/dashboard', icon: Activity },
   { name: 'MITRE ATT&CK', path: '/mitre', icon: Shield },
+  { name: 'Post-Mortem', path: '/post-mortem', icon: BookOpen },
+  { name: 'Settings', path: '/settings', icon: SettingsIcon },
 ];
 
 export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -69,25 +78,29 @@ export default function Layout({ children }: LayoutProps) {
           {/* Header Actions */}
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setSearchOpen(true)}
               className="rounded-md p-2 text-gray-400 hover:bg-gray-800 hover:text-gray-100 transition-colors"
               aria-label="Search"
             >
               <Search size={20} />
             </button>
             <button
-              className="rounded-md p-2 text-gray-400 hover:bg-gray-800 hover:text-gray-100 transition-colors"
+              onClick={() => setNotificationsOpen(true)}
+              className="rounded-md p-2 text-gray-400 hover:bg-gray-800 hover:text-gray-100 transition-colors relative"
               aria-label="Notifications"
             >
               <Bell size={20} />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
             </button>
             <button
-              className="rounded-md p-2 text-gray-400 hover:bg-gray-800 hover:text-gray-100 transition-colors"
-              aria-label="Settings"
+              onClick={() => setAiAssistantOpen(true)}
+              className="rounded-md p-2 text-gray-400 hover:bg-gray-800 hover:text-cyan-400 transition-colors"
+              aria-label="AI Assistant"
             >
-              <Settings size={20} />
+              <Sparkles size={20} />
             </button>
             <a
-              href="https://github.com/yourusername/threat-hunting-playbook"
+              href="https://github.com/anthropics/threat-hunting-playbook"
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-md p-2 text-gray-400 hover:bg-gray-800 hover:text-gray-100 transition-colors"
@@ -161,6 +174,11 @@ export default function Layout({ children }: LayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Modals & Panels */}
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+      <AIAssistant isOpen={aiAssistantOpen} onClose={() => setAiAssistantOpen(false)} />
     </div>
   );
 }

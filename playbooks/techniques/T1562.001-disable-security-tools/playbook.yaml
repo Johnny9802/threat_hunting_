@@ -1,0 +1,47 @@
+id: PB-T1562-001
+name: "Security Tools Disabled Detection"
+description: "Detect attempts to disable or tamper with security tools including AV, EDR, and firewalls"
+
+mitre:
+  technique: T1562.001
+  tactic: defense-evasion
+  subtechniques: []
+
+severity: critical
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Sysmon
+  - EDR
+  - Windows Defender Events
+
+hunt_hypothesis: |
+  Adversaries disable security to:
+  1. Allow malware execution
+  2. Prevent detection
+  3. Disable logging
+  4. Remove evidence
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Verify if security tool was legitimately disabled
+  - Check what process disabled the tool
+  - Look for subsequent malicious activity
+  - Assume compromise if unauthorized
+
+false_positives:
+  - IT maintenance
+  - Software conflicts
+  - Legitimate uninstalls
+
+references:
+  - https://attack.mitre.org/techniques/T1562/
+
+tags: [defense-evasion, security-tools, av-bypass, critical]

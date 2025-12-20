@@ -1,0 +1,17 @@
+// === PB-T1078-001 - Valid Accounts Abuse Detection ===
+// MITRE ATT&CK: T1078 - initial-access
+
+// Impossible travel - multiple countries in short time
+event.category:authentication AND event.action:success
+| stats count(), cardinality(source.geo.country_name) as countries, cardinality(source.ip) as unique_ips by user.name
+| where countries > 1 and unique_ips > 1
+
+// Password spraying pattern
+event.category:authentication AND event.outcome:failure
+| stats count() as failures, cardinality(user.name) as unique_users by source.ip
+| where failures > 20 and unique_users > 10
+
+// Off-hours authentication
+event.category:authentication AND event.outcome:success
+| eval hour = date_hour(@timestamp)
+| where hour < 6 or hour > 22

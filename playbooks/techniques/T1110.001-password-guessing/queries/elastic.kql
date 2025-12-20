@@ -1,0 +1,17 @@
+// === PB-T1110-001 - Password Guessing and Brute Force Detection ===
+// MITRE ATT&CK: T1110.001 - credential-access
+
+// Multiple failed logins same account
+event.code:4625
+| stats count() as failures by user.name, source.ip
+| where failures > 10
+
+// Password spraying pattern
+event.code:4625
+| stats cardinality(user.name) as unique_users, count() as failures by source.ip
+| where unique_users > 5 and failures > 10
+
+// SSH brute force
+event.dataset:system.auth AND message:*Failed password*
+| stats count() as failures by source.ip
+| where failures > 10

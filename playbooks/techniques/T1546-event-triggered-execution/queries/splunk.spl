@@ -1,0 +1,11 @@
+`comment("WMI Event Subscription Detection")`
+index=wineventlog source="WinEventLog:Microsoft-Windows-WMI-Activity/Operational"
+| search EventCode IN (5857, 5858, 5859, 5860, 5861)
+| rex field=Message "(?<consumer_name>CommandLineEventConsumer|ActiveScriptEventConsumer)"
+| where isnotnull(consumer_name)
+| stats count by Computer, consumer_name, Message
+
+`comment("IFEO Debugger Detection")`
+index=sysmon EventCode=13
+| search TargetObject="*\Image File Execution Options\*\Debugger"
+| stats count by Computer, TargetObject, Details, Image

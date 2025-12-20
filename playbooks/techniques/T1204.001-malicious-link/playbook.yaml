@@ -1,0 +1,47 @@
+id: PB-T1204-001
+name: "Malicious Link User Execution Detection"
+description: "Detect user execution of malicious links leading to payload download or credential theft"
+
+mitre:
+  technique: T1204.001
+  tactic: execution
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Web Proxy Logs
+  - DNS Logs
+  - Email Gateway
+  - EDR
+
+hunt_hypothesis: |
+  Users clicking malicious links leads to:
+  1. Drive-by download of malware
+  2. Credential harvesting pages
+  3. OAuth consent phishing
+  4. Browser exploitation
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Check URL reputation on VirusTotal, URLhaus
+  - Analyze page content if captured
+  - Check for subsequent downloads
+  - Review user's credentials for compromise
+
+false_positives:
+  - Legitimate shortened URLs
+  - Marketing campaigns
+  - New legitimate domains
+
+references:
+  - https://attack.mitre.org/techniques/T1204/
+
+tags: [execution, user-execution, phishing, malicious-link]

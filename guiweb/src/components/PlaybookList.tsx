@@ -195,6 +195,13 @@ export default function PlaybookList() {
             {filteredPlaybooks.length} of {playbooks?.length || 0} playbooks
           </p>
         </div>
+        <Link
+          to="/playbook/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white hover:from-cyan-600 hover:to-blue-700 transition-all"
+        >
+          <Shield size={16} />
+          New Playbook
+        </Link>
       </div>
 
       {/* Search and Filters */}

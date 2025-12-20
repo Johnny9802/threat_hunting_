@@ -1,0 +1,24 @@
+`comment("=== PB-T1021-001 - Remote Desktop Protocol Lateral Movement Detection ===")`
+`comment("MITRE ATT&CK: T1021.001 - lateral-movement")`
+
+`comment("RDP Login Events")`
+index=windows sourcetype=windows:security EventCode=4624 LogonType=10
+| stats count by TargetUserName, IpAddress, WorkstationName
+| table TargetUserName, IpAddress, WorkstationName, count
+
+`comment("RDP to Multiple Hosts")`
+index=windows sourcetype=windows:security EventCode=4624 LogonType=10
+| bin _time span=1h
+| stats dc(ComputerName) as hosts_accessed by TargetUserName, IpAddress, _time
+| where hosts_accessed > 5
+| table _time, TargetUserName, IpAddress, hosts_accessed
+
+`comment("RDP at Unusual Hours")`
+index=windows sourcetype=windows:security EventCode=4624 LogonType=10
+| eval hour=strftime(_time, "%H")
+| where hour < 6 OR hour > 22
+| table _time, TargetUserName, IpAddress, ComputerName
+
+`comment("RDP Session Hijacking")`
+index=windows sourcetype=WinEventLog:Microsoft-Windows-TerminalServices* EventCode=25
+| table _time, ComputerName, SessionID, User

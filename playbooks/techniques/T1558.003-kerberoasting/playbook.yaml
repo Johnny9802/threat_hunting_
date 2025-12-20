@@ -1,0 +1,45 @@
+id: PB-T1558-003
+name: "Kerberoasting Detection"
+description: "Detect Kerberoasting attacks targeting service account Kerberos tickets"
+
+mitre:
+  technique: T1558.003
+  tactic: credential-access
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Domain Controller Logs
+
+hunt_hypothesis: |
+  Kerberoasting requests TGS for service accounts:
+  1. Requests for RC4 encrypted tickets
+  2. Mass service ticket requests
+  3. Targeting accounts with SPNs
+  4. Offline password cracking
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify accounts targeted for service ticket requests
+  - Check if requesting user normally needs these tickets
+  - Review service account password age
+  - Consider immediate password rotation for targeted accounts
+
+false_positives:
+  - Legitimate service access
+  - Service discovery tools
+  - Administrative activity
+
+references:
+  - https://attack.mitre.org/techniques/T1558/
+
+tags: [credential-access, kerberoasting, kerberos, active-directory]

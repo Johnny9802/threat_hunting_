@@ -1,0 +1,46 @@
+id: PB-T1047-001
+name: "WMI Execution Detection"
+description: "Detect Windows Management Instrumentation abuse for code execution, reconnaissance, and lateral movement"
+
+mitre:
+  technique: T1047
+  tactic: execution
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - Windows Security Events
+  - WMI Trace Logs
+
+hunt_hypothesis: |
+  WMI is abused for:
+  1. Remote process execution via wmic or WMI classes
+  2. Event subscription persistence
+  3. System reconnaissance
+  4. Lateral movement across network
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Check WMI consumer-filter-binding for persistence
+  - Review remote WMI execution sources
+  - Check for reconnaissance queries
+  - Analyze spawned processes from wmiprvse.exe
+
+false_positives:
+  - SCCM/MECM
+  - Monitoring tools
+  - Admin scripts
+
+references:
+  - https://attack.mitre.org/techniques/T1047/
+
+tags: [execution, wmi, windows, lateral-movement]

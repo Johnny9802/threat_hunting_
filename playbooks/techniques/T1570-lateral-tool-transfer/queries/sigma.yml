@@ -1,0 +1,22 @@
+title: Suspicious File Written to Admin Share
+id: 19012345-2345-9abc-def0-23459012345b
+status: production
+level: high
+logsource:
+    product: windows
+    category: file_event
+detection:
+    selection:
+        TargetFilename|contains:
+            - '\ADMIN$\'
+            - '\C$\'
+            - '\IPC$\'
+        TargetFilename|endswith:
+            - '.exe'
+            - '.dll'
+            - '.ps1'
+            - '.bat'
+    condition: selection
+tags:
+    - attack.lateral_movement
+    - attack.t1570

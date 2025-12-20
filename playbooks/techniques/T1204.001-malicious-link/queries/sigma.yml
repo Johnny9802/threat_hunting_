@@ -1,0 +1,14 @@
+title: Access to Newly Registered Domain
+id: g1234567-new-domain-detect-001
+status: production
+level: medium
+logsource:
+    category: proxy
+detection:
+    selection:
+        c-uri|contains: 'http'
+    # Requires enrichment with domain age
+    condition: selection
+tags:
+    - attack.execution
+    - attack.t1204.001

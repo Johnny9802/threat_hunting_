@@ -1,0 +1,22 @@
+title: WMI Event Subscription Persistence
+id: c4567890-def0-4567-89ab-def04567890c
+status: production
+level: high
+logsource:
+    product: windows
+    service: wmi
+detection:
+    selection:
+        EventID:
+            - 5857
+            - 5858
+            - 5859
+            - 5860
+            - 5861
+    keywords:
+        - 'CommandLineEventConsumer'
+        - 'ActiveScriptEventConsumer'
+    condition: selection and keywords
+tags:
+    - attack.persistence
+    - attack.t1546.003

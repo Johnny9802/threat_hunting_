@@ -1,0 +1,26 @@
+title: Registry Run Key Modification
+id: j1234567-runkey-detect-001
+status: production
+level: medium
+logsource:
+    category: registry_set
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\CurrentVersion\Run'
+            - '\CurrentVersion\RunOnce'
+    suspicious_values:
+        Details|contains:
+            - '\Temp\'
+            - '\AppData\'
+            - '.ps1'
+            - 'powershell'
+            - 'cmd.exe'
+            - 'mshta'
+            - 'wscript'
+            - 'cscript'
+    condition: selection and suspicious_values
+tags:
+    - attack.persistence
+    - attack.t1547.001

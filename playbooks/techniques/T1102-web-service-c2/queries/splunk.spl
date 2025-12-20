@@ -1,0 +1,12 @@
+`comment("Suspicious API/Webhook Usage")`
+index=proxy
+| where match(url, "(?i)(api\.telegram|discord\.com/api/webhooks|api\.github|pastebin\.com/raw|hastebin)")
+| stats count dc(dest_port) as ports by src_ip, url, user
+| where count > 10 OR ports > 2
+
+`comment("Cloud Storage C2 Patterns")`
+index=proxy
+| where match(url, "(?i)(dropbox\.com|drive\.google|onedrive|api\.box)")
+| bucket _time span=1h
+| stats count by _time, src_ip, url
+| where count > 50

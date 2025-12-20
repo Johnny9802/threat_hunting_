@@ -1,0 +1,22 @@
+`comment("=== PB-T1560-001 - Archive Collected Data Detection ===")`
+`comment("MITRE ATT&CK: T1560.001 - collection")`
+
+`comment("Archive Creation via Command Line")`
+index=sysmon EventCode=1
+| where Image LIKE "%\7z%" OR Image LIKE "%\rar%" OR Image LIKE "%\zip%" OR Image LIKE "%\tar%"
+| table _time, ComputerName, User, Image, CommandLine
+
+`comment("PowerShell Archive Commands")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| where CommandLine LIKE "%Compress-Archive%" OR CommandLine LIKE "%ZipFile%" OR CommandLine LIKE "%GZipStream%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("Large Archive File Creation")`
+index=sysmon EventCode=11
+| where TargetFilename LIKE "%.zip" OR TargetFilename LIKE "%.rar" OR TargetFilename LIKE "%.7z" OR TargetFilename LIKE "%.tar%"
+| table _time, ComputerName, User, Image, TargetFilename
+
+`comment("Archive in Suspicious Location")`
+index=sysmon EventCode=11
+| where (TargetFilename LIKE "%\Temp\%" OR TargetFilename LIKE "%\AppData\%") AND (TargetFilename LIKE "%.zip" OR TargetFilename LIKE "%.rar")
+| table _time, ComputerName, User, Image, TargetFilename

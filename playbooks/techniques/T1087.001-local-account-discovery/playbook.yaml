@@ -1,0 +1,46 @@
+id: PB-T1087-001
+name: "Account Discovery Detection"
+description: "Detect enumeration of local and domain accounts for reconnaissance"
+
+mitre:
+  technique: T1087.001
+  tactic: discovery
+  subtechniques: []
+
+severity: medium
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - Windows Security Events
+  - PowerShell Logs
+
+hunt_hypothesis: |
+  Account discovery for lateral movement planning:
+  1. Local account enumeration
+  2. Domain user enumeration
+  3. Admin group membership queries
+  4. Service account discovery
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Determine if enumeration is authorized
+  - Check what accounts were discovered
+  - Look for subsequent lateral movement
+  - Review access to sensitive accounts
+
+false_positives:
+  - IT administration
+  - Inventory scripts
+  - Monitoring tools
+
+references:
+  - https://attack.mitre.org/techniques/T1087/
+
+tags: [discovery, account-discovery, enumeration]

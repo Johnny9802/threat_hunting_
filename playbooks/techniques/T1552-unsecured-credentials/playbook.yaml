@@ -1,0 +1,48 @@
+id: PB-T1552-001
+name: "Unsecured Credentials Discovery Detection"
+description: "Detect attempts to find unsecured credentials in files, registry, and other locations"
+
+mitre:
+  technique: T1552
+  tactic: credential-access
+  subtechniques: ['T1552.001', 'T1552.002', 'T1552.004', 'T1552.006']
+
+severity: high
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Process Creation"
+  - "File Access"
+  - "Command Line"
+
+hunt_hypothesis: |
+  Adversaries search for credentials stored in:
+  1. Configuration files (web.config, unattend.xml)
+  2. Registry keys (VNC, PuTTY, WinSCP)
+  3. Browser password stores
+  4. Scripts and automation files
+  5. Cloud metadata services
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Review processes accessing sensitive file locations"
+  - "Check for registry queries to known credential stores"
+  - "Analyze command lines for credential searching patterns"
+  - "Review file access to common credential storage locations"
+  - "Check for access to cloud metadata endpoints"
+
+false_positives:
+  - "System administration tools"
+  - "Backup software"
+  - "Password managers"
+
+tags: ['credential-access', 'unsecured-credentials', 'passwords']
+
+references:
+  - "https://attack.mitre.org/techniques/T1552/"

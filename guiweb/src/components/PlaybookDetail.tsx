@@ -23,12 +23,13 @@ import { usePlaybook } from '../hooks/usePlaybooks';
 import { cn, getSeverityBadgeColor, formatDate, copyToClipboard, downloadText } from '../lib/utils';
 import type { Playbook, IOC } from '../types/playbook';
 
-type TabType = 'overview' | 'queries' | 'iocs';
+type TabType = 'overview' | 'queries' | 'iocs' | 'response';
 
 const tabs: { id: TabType; label: string; icon: typeof Shield }[] = [
   { id: 'overview', label: 'Overview', icon: Shield },
   { id: 'queries', label: 'Queries', icon: FileCode },
   { id: 'iocs', label: 'IOCs', icon: AlertCircle },
+  { id: 'response', label: 'Response', icon: AlertTriangle },
 ];
 
 export default function PlaybookDetail() {
@@ -191,6 +192,7 @@ export default function PlaybookDetail() {
           />
         )}
         {activeTab === 'iocs' && <IOCsTab playbook={playbook} />}
+        {activeTab === 'response' && <ResponseTab playbook={playbook} />}
       </div>
     </div>
   );
@@ -557,6 +559,122 @@ function InfoItem({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-sm text-gray-400 mb-1">{label}</p>
       <p className="font-medium text-gray-100">{value}</p>
+    </div>
+  );
+}
+
+// Response Tab
+function ResponseTab({ playbook }: { playbook: Playbook }) {
+  if (!playbook.response) {
+    return (
+      <div className="rounded-lg border border-gray-800 bg-gray-900 p-12 text-center">
+        <AlertTriangle className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+        <p className="text-gray-400">No response actions defined for this playbook</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Response actions will be added as the playbook evolves
+        </p>
+      </div>
+    );
+  }
+
+  const sections = [
+    {
+      key: 'quick_wins',
+      title: 'Quick Wins',
+      description: 'Immediate actions for rapid risk reduction',
+      icon: Lightbulb,
+      color: 'text-yellow-500',
+      bgColor: 'bg-yellow-500/10',
+      borderColor: 'border-yellow-500/20',
+      data: playbook.response.quick_wins,
+    },
+    {
+      key: 'containment',
+      title: 'Containment',
+      description: 'Actions to prevent spread and limit impact',
+      icon: Shield,
+      color: 'text-cyan-500',
+      bgColor: 'bg-cyan-500/10',
+      borderColor: 'border-cyan-500/20',
+      data: playbook.response.containment,
+    },
+    {
+      key: 'eradication',
+      title: 'Eradication',
+      description: 'Steps to remove the threat completely',
+      icon: AlertCircle,
+      color: 'text-red-500',
+      bgColor: 'bg-red-500/10',
+      borderColor: 'border-red-500/20',
+      data: playbook.response.eradication,
+    },
+    {
+      key: 'recovery',
+      title: 'Recovery',
+      description: 'Restoration and return to normal operations',
+      icon: CheckCircle,
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10',
+      borderColor: 'border-green-500/20',
+      data: playbook.response.recovery,
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Info Banner */}
+      <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-blue-300 font-medium">
+              NIST Incident Response Framework
+            </p>
+            <p className="text-xs text-blue-200/80 mt-1">
+              These response actions follow the NIST incident response lifecycle: Preparation,
+              Detection & Analysis, Containment/Eradication/Recovery, and Post-Incident Activity.
+              Severity: <strong>{playbook.severity.toUpperCase()}</strong>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Response Sections */}
+      {sections.map((section) => {
+        if (!section.data || section.data.length === 0) return null;
+
+        const Icon = section.icon;
+
+        return (
+          <div
+            key={section.key}
+            className={cn(
+              'rounded-lg border bg-gray-900 p-6',
+              section.borderColor
+            )}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div className={cn('rounded-lg p-2', section.bgColor)}>
+                <Icon className={cn('h-5 w-5', section.color)} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-100">{section.title}</h3>
+                <p className="text-sm text-gray-400 mt-0.5">{section.description}</p>
+              </div>
+            </div>
+            <ul className="space-y-2 ml-11">
+              {section.data.map((item, index) => (
+                <li key={index} className="flex items-start gap-3">
+                  <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-800 text-gray-400 text-xs font-semibold mt-0.5">
+                    {index + 1}
+                  </span>
+                  <span className="text-gray-300 leading-relaxed">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
     </div>
   );
 }

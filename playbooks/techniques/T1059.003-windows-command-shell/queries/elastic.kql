@@ -1,0 +1,14 @@
+// === PB-T1059-003 - Windows Command Shell Abuse Detection ===
+// MITRE ATT&CK: T1059.003 - execution
+
+// CMD with suspicious parent
+event.code:1 AND process.name:cmd.exe AND
+process.parent.name:(outlook.exe OR winword.exe OR excel.exe OR powerpnt.exe OR wmiprvse.exe OR mshta.exe)
+
+// Reconnaissance via CMD
+event.code:1 AND process.name:cmd.exe AND
+process.command_line:(*whoami* OR *net user* OR *net group* OR *ipconfig* OR *systeminfo* OR *tasklist*)
+
+// Download via CMD
+event.code:1 AND process.name:cmd.exe AND
+process.command_line:(*curl* OR *wget* OR *certutil* OR *bitsadmin* OR *Invoke-WebRequest*)

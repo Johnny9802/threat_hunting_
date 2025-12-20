@@ -1,0 +1,9 @@
+`comment("Searching for Passwords in Files")`
+index=sysmon EventCode=1
+| search CommandLine="*findstr*password*" OR CommandLine="*findstr*/s*pass*" OR CommandLine="*dir*/s*password*" OR CommandLine="*select-string*password*"
+| stats count by Image, CommandLine, User, Computer
+
+`comment("Registry Credential Store Access")`
+index=sysmon EventCode=13
+| search TargetObject="*\SOFTWARE\SimonTatham\PuTTY\Sessions*" OR TargetObject="*\SOFTWARE\Martin Prikryl\WinSCP*" OR TargetObject="*\SOFTWARE\RealVNC*"
+| stats count by Image, TargetObject, Computer

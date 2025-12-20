@@ -1,0 +1,16 @@
+// === PB-T1133-001 - External Remote Services Abuse Detection ===
+// MITRE ATT&CK: T1133 - initial-access
+
+// VPN from multiple countries
+event.dataset:*vpn* AND event.action:success
+| stats cardinality(source.geo.country_name) as countries by user.name
+| where countries > 2
+
+// RDP brute force followed by success
+event.code:4625 AND winlog.logon.type:RemoteInteractive
+| stats count() as failures by source.ip
+| where failures > 10
+
+// SSH from unusual locations
+event.category:authentication AND process.name:sshd AND event.outcome:success AND
+NOT source.geo.country_iso_code:IT

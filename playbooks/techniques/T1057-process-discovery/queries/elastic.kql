@@ -1,0 +1,12 @@
+// === PB-T1057-001 - Process Discovery Detection ===
+// MITRE ATT&CK: T1057 - discovery
+
+// Tasklist execution
+event.code:1 AND process.name:tasklist.exe
+
+// WMIC process list
+event.code:1 AND process.name:wmic.exe AND process.command_line:*process*list*
+
+// PowerShell process enumeration
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+process.command_line:*Get-Process*

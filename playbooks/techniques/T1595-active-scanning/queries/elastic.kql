@@ -1,0 +1,37 @@
+// === T1595 Active Scanning Detection - Elastic KQL ===
+// Detects port scanning and reconnaissance activity
+
+// Query 1: High volume connection attempts (Firewall/Network logs)
+event.category:network AND event.action:(denied OR blocked OR drop) AND
+source.ip:* AND destination.port:*
+| stats count() as connection_attempts, cardinality(destination.port) as unique_ports, cardinality(destination.ip) as unique_destinations by source.ip
+| where connection_attempts > 100 and unique_ports > 20
+
+// Query 2: Known vulnerability scanner user agents
+user_agent.original:(*Nmap* OR *masscan* OR *Nikto* OR *sqlmap* OR *WPScan* OR *Acunetix* OR *Nessus* OR *OpenVAS* OR *ZAP* OR *Burp* OR *DirBuster* OR *Gobuster*)
+
+// Query 3: Common vulnerability probing paths
+url.path:(*admin* OR *wp-admin* OR *phpmyadmin* OR *manager* OR *console* OR *.git* OR *.env* OR *backup* OR *config* OR *wp-config* OR *web.config* OR *.htaccess* OR *passwd* OR *shadow*)
+| stats count() as probe_count, cardinality(url.path) as unique_paths by source.ip
+| where probe_count > 20
+
+// Query 4: Zeek/Network connection state analysis for SYN scans
+event.dataset:zeek.connection AND zeek.connection.state:(S0 OR REJ OR RSTO)
+| stats count() as failed_connections, cardinality(destination.port) as unique_ports by source.ip
+| where failed_connections > 200 and unique_ports > 30
+
+// Query 5: Rapid sequential port access pattern
+event.category:network AND destination.port:*
+| sort @timestamp
+| stats count() as connections, cardinality(destination.port) as unique_ports, values(destination.port) as port_list by source.ip, destination.ip
+| where connections > 100 and unique_ports > 50
+
+// Query 6: SSH/RDP brute force as part of reconnaissance
+(destination.port:22 OR destination.port:3389) AND event.action:(denied OR failed)
+| stats count() as failed_attempts by source.ip, destination.port
+| where failed_attempts > 50
+
+// Query 7: HTTP response code analysis for scanning detection
+http.response.status_code:(403 OR 404 OR 401 OR 500)
+| stats count() as error_responses, cardinality(url.path) as unique_paths by source.ip
+| where error_responses > 100 and unique_paths > 30

@@ -1,0 +1,48 @@
+id: PB-T1106-001
+name: "Suspicious Native API Execution Detection"
+description: "Detect malicious use of Windows Native API calls for code execution"
+
+mitre:
+  technique: T1106
+  tactic: execution
+  subtechniques: []
+
+severity: high
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Process Creation"
+  - "API Monitoring"
+  - "Sysmon"
+
+hunt_hypothesis: |
+  Adversaries use Windows Native API (ntdll.dll) to bypass security controls.
+  Common abuse includes:
+  1. NtCreateProcess/NtCreateThreadEx for process hollowing
+  2. NtAllocateVirtualMemory for shellcode injection
+  3. NtWriteVirtualMemory for code injection
+  4. Direct syscalls to evade EDR hooks
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Analyze parent-child process relationships"
+  - "Check for memory allocation patterns"
+  - "Review process command lines"
+  - "Correlate with network connections"
+  - "Look for unsigned binaries making API calls"
+
+false_positives:
+  - "Security tools"
+  - "Development environments"
+  - "Debugging tools"
+
+tags: ['execution', 'native-api', 'injection', 'evasion']
+
+references:
+  - "https://attack.mitre.org/techniques/T1106/"

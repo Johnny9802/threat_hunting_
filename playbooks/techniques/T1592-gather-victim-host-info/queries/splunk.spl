@@ -1,0 +1,8 @@
+`comment("=== PB-T1592-001 - Gather Victim Host Information Detection ===")`
+`comment("MITRE ATT&CK: T1592 - reconnaissance")`
+
+index=web sourcetype=access_combined
+| rex field=_raw "(?<fingerprint_js>fingerprint|canvas|webgl|audio|font)"
+| where isnotnull(fingerprint_js)
+| stats count dc(uri) as unique_paths by src_ip, useragent
+| where count > 20

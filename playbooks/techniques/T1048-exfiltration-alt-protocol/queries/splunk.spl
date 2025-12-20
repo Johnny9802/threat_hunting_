@@ -1,0 +1,22 @@
+`comment("=== PB-T1048-001 - Exfiltration Over Alternative Protocol Detection ===")`
+`comment("MITRE ATT&CK: T1048 - exfiltration")`
+
+`comment("Unusual Outbound Protocol")`
+index=firewall sourcetype=pan:traffic OR sourcetype=cisco:asa
+| where dest_port NOT IN (80, 443, 53, 22, 3389, 25, 587)
+| stats sum(bytes_out) as total_bytes by src_ip, dest_ip, dest_port
+| where total_bytes > 100000000
+| table src_ip, dest_ip, dest_port, total_bytes
+
+`comment("ICMP Data Exfiltration")`
+index=firewall sourcetype=pan:traffic protocol=icmp
+| stats sum(bytes) as icmp_bytes count as icmp_count by src_ip, dest_ip
+| where icmp_bytes > 1000000 OR icmp_count > 1000
+| table src_ip, dest_ip, icmp_bytes, icmp_count
+
+`comment("Large DNS Responses (DNS Tunneling)")`
+index=dns sourcetype=dns
+| where record_type IN ("TXT", "NULL", "CNAME")
+| stats sum(answer_len) as total_dns_bytes by src_ip
+| where total_dns_bytes > 1000000
+| table src_ip, total_dns_bytes

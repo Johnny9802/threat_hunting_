@@ -1,0 +1,24 @@
+title: CreateRemoteThread Into System Process
+id: d5678901-ef01-5678-9abc-ef015678901d
+status: production
+level: critical
+logsource:
+    product: windows
+    category: create_remote_thread
+detection:
+    selection:
+        TargetImage|endswith:
+            - '\svchost.exe'
+            - '\lsass.exe'
+            - '\services.exe'
+            - '\winlogon.exe'
+    filter:
+        SourceImage|endswith:
+            - '\csrss.exe'
+            - '\wininit.exe'
+            - '\MsMpEng.exe'
+    condition: selection and not filter
+tags:
+    - attack.privilege_escalation
+    - attack.defense_evasion
+    - attack.t1055

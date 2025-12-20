@@ -1,0 +1,7 @@
+// === PB-T1592-001 - Gather Victim Host Information Detection ===
+// MITRE ATT&CK: T1592 - reconnaissance
+
+url.path:(*fingerprint* OR *canvas* OR *webgl*) OR
+user_agent.original:(*bot* OR *crawler* OR *spider*)
+| stats count() by source.ip
+| where count > 20

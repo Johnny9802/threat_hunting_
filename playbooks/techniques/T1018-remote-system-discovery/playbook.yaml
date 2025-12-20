@@ -1,0 +1,48 @@
+id: PB-T1018-001
+name: "Remote System Discovery Detection"
+description: "Detect attempts to discover remote systems on the network"
+
+mitre:
+  technique: T1018
+  tactic: discovery
+  subtechniques: []
+
+severity: medium
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Process Creation"
+  - "Network Traffic"
+  - "Command Line"
+
+hunt_hypothesis: |
+  Adversaries enumerate remote systems to identify targets for lateral movement:
+  1. net view, net group commands
+  2. nltest /dclist
+  3. ping sweeps
+  4. PowerShell AD module queries
+  5. arp cache enumeration
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Review the user context performing discovery"
+  - "Check for subsequent lateral movement attempts"
+  - "Analyze scope of discovery (single host vs network-wide)"
+  - "Correlate with authentication events"
+  - "Review time of discovery activity"
+
+false_positives:
+  - "System administrators"
+  - "Monitoring tools"
+  - "Inventory software"
+
+tags: ['discovery', 'network', 'reconnaissance', 'lateral-movement-prep']
+
+references:
+  - "https://attack.mitre.org/techniques/T1018/"

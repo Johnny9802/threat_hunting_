@@ -1,0 +1,11 @@
+`comment("Large Outbound Data Transfer")`
+index=network OR index=firewall
+| where bytes_out > 10000000 AND dest_port IN (80, 443, 8080)
+| stats sum(bytes_out) as total_bytes dc(dest_ip) as unique_dests by src_ip
+| where total_bytes > 100000000 OR unique_dests > 20
+
+`comment("Chunked Transfer Pattern")`
+index=proxy
+| bucket _time span=5m
+| stats count sum(bytes_out) as total_bytes by _time, src_ip, url
+| where count > 20 AND total_bytes > 5000000

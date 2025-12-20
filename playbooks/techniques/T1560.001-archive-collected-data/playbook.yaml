@@ -1,0 +1,45 @@
+id: PB-T1560-001
+name: "Archive Collected Data Detection"
+description: "Detect creation of archives for data collection and exfiltration staging"
+
+mitre:
+  technique: T1560.001
+  tactic: collection
+  subtechniques: []
+
+severity: medium
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - EDR
+
+hunt_hypothesis: |
+  Adversaries archive data for:
+  1. Easier exfiltration
+  2. Data compression
+  3. Encryption before exfil
+  4. Staging for transfer
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Review what files are being archived
+  - Check archive destination
+  - Look for subsequent exfiltration
+  - Identify if data is sensitive
+
+false_positives:
+  - Backup operations
+  - Software deployments
+  - User archiving
+
+references:
+  - https://attack.mitre.org/techniques/T1560/
+
+tags: [collection, archive, compression, staging]

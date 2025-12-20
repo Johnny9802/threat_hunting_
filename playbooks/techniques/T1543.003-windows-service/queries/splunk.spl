@@ -1,0 +1,22 @@
+`comment("=== PB-T1543-003 - Malicious Windows Service Creation ===")`
+`comment("MITRE ATT&CK: T1543.003 - persistence")`
+
+`comment("New Service Installation")`
+index=windows sourcetype=WinEventLog:System EventCode=7045
+| table _time, ComputerName, ServiceName, ImagePath, ServiceType, StartType, AccountName
+
+`comment("Service Created via sc.exe")`
+index=sysmon EventCode=1 Image="*\sc.exe"
+| where CommandLine LIKE "%create%"
+| rex field=CommandLine "binPath=\s*(?<service_path>[^\s]+)"
+| table _time, ComputerName, User, CommandLine, service_path
+
+`comment("Suspicious Service Paths")`
+index=windows sourcetype=WinEventLog:System EventCode=7045
+| where ImagePath LIKE "%\Temp\%" OR ImagePath LIKE "%\AppData\%" OR ImagePath LIKE "%.ps1%" OR ImagePath LIKE "%cmd /c%"
+| table _time, ComputerName, ServiceName, ImagePath
+
+`comment("Services Set to Run as SYSTEM")`
+index=windows sourcetype=WinEventLog:System EventCode=7045
+| where AccountName="LocalSystem" OR AccountName="NT AUTHORITY\SYSTEM"
+| table _time, ComputerName, ServiceName, ImagePath, AccountName

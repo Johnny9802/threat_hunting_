@@ -1,0 +1,5 @@
+index=sysmon EventCode=10
+| search TargetImage="*\lsass.exe" OR TargetImage="*\csrss.exe"
+| where GrantedAccess IN ("0x1FFFFF", "0x1010", "0x1410", "0x143A")
+| stats count by SourceImage, TargetImage, GrantedAccess, Computer
+| where count > 0

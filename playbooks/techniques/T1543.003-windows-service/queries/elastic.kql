@@ -1,0 +1,13 @@
+// === PB-T1543-003 - Malicious Windows Service Creation ===
+// MITRE ATT&CK: T1543.003 - persistence
+
+// New service installed
+event.code:7045 AND winlog.channel:System
+
+// Service creation via sc.exe
+event.code:1 AND process.name:sc.exe AND process.command_line:*create*
+
+// Suspicious service paths
+event.code:7045 AND (
+    winlog.event_data.ImagePath:(*\Temp\* OR *\AppData\* OR *.ps1* OR *cmd /c*)
+)

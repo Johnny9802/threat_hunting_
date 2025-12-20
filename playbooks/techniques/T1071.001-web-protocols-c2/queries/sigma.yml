@@ -1,0 +1,17 @@
+title: Suspicious HTTP User-Agent
+id: x1234567-http-ua-001
+status: production
+level: medium
+logsource:
+    category: proxy
+detection:
+    selection:
+        c-useragent|contains:
+            - 'curl'
+            - 'wget'
+            - 'python'
+            - 'Go-http-client'
+    condition: selection
+tags:
+    - attack.command_and_control
+    - attack.t1071.001

@@ -1,0 +1,52 @@
+`comment("=== T1595 Active Scanning Detection - Splunk SPL ===")`
+`comment("Detects port scanning and reconnaissance activity")`
+
+`comment("Query 1: High volume port scanning detection from firewall logs")`
+index=firewall sourcetype=pan:traffic OR sourcetype=cisco:asa OR sourcetype=fortinet:traffic
+action=denied OR action=blocked OR action=drop
+| bin _time span=5m
+| stats count as connection_attempts dc(dest_port) as unique_ports dc(dest_ip) as unique_destinations by _time, src_ip
+| where connection_attempts > 100 AND unique_ports > 20
+| eval scan_type=case(
+    unique_ports > 100, "aggressive_port_scan",
+    unique_destinations > 50, "network_sweep",
+    unique_ports > 20 AND unique_ports <= 100, "targeted_port_scan",
+    true(), "suspicious_activity"
+)
+| table _time, src_ip, connection_attempts, unique_ports, unique_destinations, scan_type
+
+`comment("Query 2: Sequential port scanning pattern detection")`
+index=firewall sourcetype=pan:traffic OR sourcetype=cisco:asa
+| sort 0 _time
+| streamstats current=f last(dest_port) as prev_port by src_ip
+| eval port_diff = dest_port - prev_port
+| where port_diff >= 1 AND port_diff <= 5
+| stats count as sequential_connections dc(dest_port) as ports_scanned values(dest_port) as port_list by src_ip, dest_ip
+| where sequential_connections > 50
+| table src_ip, dest_ip, sequential_connections, ports_scanned, port_list
+
+`comment("Query 3: Known scanner user agent detection in web logs")`
+index=web sourcetype=access_combined OR sourcetype=iis
+| rex field=useragent "(?<scanner_signature>Nmap|masscan|Nikto|sqlmap|WPScan|Acunetix|Nessus|OpenVAS|ZAP|Burp)"
+| where isnotnull(scanner_signature)
+| stats count as requests dc(uri) as unique_uris values(uri) as sample_uris by src_ip, scanner_signature
+| where count > 10
+| table src_ip, scanner_signature, requests, unique_uris, sample_uris
+
+`comment("Query 4: SYN flood / Half-open connection detection (Zeek/Bro)")`
+index=zeek sourcetype=zeek:conn
+| where conn_state="S0" OR conn_state="REJ"
+| bin _time span=1m
+| stats count as failed_connections dc(id.resp_p) as unique_ports by _time, id.orig_h
+| where failed_connections > 500 AND unique_ports > 50
+| rename id.orig_h as src_ip
+| table _time, src_ip, failed_connections, unique_ports
+
+`comment("Query 5: Vulnerability scanner detection via common scan paths")`
+index=web sourcetype=access_combined OR sourcetype=iis
+| rex field=uri "(?<vuln_path>\/admin|\/wp-admin|\/phpmyadmin|\/manager|\/console|\/\.git|\/\.env|\/backup|\/config|\/wp-config\.php|\/web\.config)"
+| where isnotnull(vuln_path)
+| stats count as probe_attempts dc(uri) as unique_paths values(uri) as probed_paths by src_ip
+| where probe_attempts > 20 AND unique_paths > 5
+| lookup local=true threat_intel ip as src_ip OUTPUT threat_score, threat_category
+| table src_ip, probe_attempts, unique_paths, probed_paths, threat_score, threat_category

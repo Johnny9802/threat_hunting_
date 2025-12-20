@@ -1,0 +1,12 @@
+// === PB-T1560-001 - Archive Collected Data Detection ===
+// MITRE ATT&CK: T1560.001 - collection
+
+// Archive tool execution
+event.code:1 AND process.name:(7z.exe OR rar.exe OR zip.exe OR tar.exe)
+
+// PowerShell archive commands
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+process.command_line:(*Compress-Archive* OR *ZipFile*)
+
+// Archive file creation
+event.code:11 AND file.extension:(zip OR rar OR 7z OR tar OR gz)

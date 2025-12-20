@@ -1,0 +1,19 @@
+title: Kerberoasting Attack Detection
+id: r1234567-kerberoast-detect-001
+status: production
+level: high
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4769
+        TicketEncryptionType:
+            - '0x17'  # RC4
+            - '0x18'  # RC4
+    filter:
+        ServiceName|endswith: '$'  # Machine accounts normal
+    condition: selection and not filter
+tags:
+    - attack.credential_access
+    - attack.t1558.003

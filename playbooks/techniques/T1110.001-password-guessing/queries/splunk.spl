@@ -1,0 +1,28 @@
+`comment("=== PB-T1110-001 - Password Guessing and Brute Force Detection ===")`
+`comment("MITRE ATT&CK: T1110.001 - credential-access")`
+
+`comment("Multiple Failed Logins Same Account")`
+index=windows sourcetype=windows:security EventCode=4625
+| bin _time span=15m
+| stats count as failures by TargetUserName, IpAddress, _time
+| where failures > 10
+| table _time, TargetUserName, IpAddress, failures
+
+`comment("Multiple Failed Logins Same Source")`
+index=windows sourcetype=windows:security EventCode=4625
+| bin _time span=15m
+| stats dc(TargetUserName) as unique_users count as total_failures by IpAddress, _time
+| where unique_users > 5 AND total_failures > 10
+| table _time, IpAddress, unique_users, total_failures
+
+`comment("Failed Login Followed by Success")`
+index=windows sourcetype=windows:security (EventCode=4625 OR EventCode=4624) LogonType IN (2, 3, 10)
+| stats count(eval(EventCode=4625)) as failures count(eval(EventCode=4624)) as successes by TargetUserName, IpAddress
+| where failures > 5 AND successes > 0
+| table TargetUserName, IpAddress, failures, successes
+
+`comment("SSH Brute Force")`
+index=linux sourcetype=linux:auth "Failed password"
+| bin _time span=10m
+| stats count as failures by src_ip, user, _time
+| where failures > 10

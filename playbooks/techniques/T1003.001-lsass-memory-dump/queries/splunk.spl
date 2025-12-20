@@ -1,0 +1,22 @@
+`comment("=== PB-T1003-001 - LSASS Memory Dumping Detection ===")`
+`comment("MITRE ATT&CK: T1003.001 - credential-access")`
+
+`comment("LSASS Access")`
+index=sysmon EventCode=10 TargetImage="*\lsass.exe"
+| where GrantedAccess IN ("0x1010", "0x1410", "0x1438", "0x143a", "0x1fffff")
+| table _time, ComputerName, SourceImage, TargetImage, GrantedAccess, CallTrace
+
+`comment("ProcDump on LSASS")`
+index=sysmon EventCode=1 Image="*\procdump*.exe"
+| where CommandLine LIKE "%lsass%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("comsvcs.dll MiniDump")`
+index=sysmon EventCode=1
+| where CommandLine LIKE "%comsvcs%MiniDump%"
+| table _time, ComputerName, User, Image, CommandLine
+
+`comment("Task Manager LSASS Dump")`
+index=sysmon EventCode=11
+| where TargetFilename LIKE "%lsass%.dmp" OR TargetFilename LIKE "%lsass%.dump"
+| table _time, ComputerName, User, Image, TargetFilename

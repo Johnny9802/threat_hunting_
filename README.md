@@ -1,432 +1,307 @@
-# 🎯 Threat Hunting Playbook
+# Threat Hunting Playbook
 
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/Johnny9802/threat_hunting_/releases)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI/CD](https://github.com/Johnny9802/threat_hunting_/actions/workflows/ci.yml/badge.svg)](https://github.com/Johnny9802/threat_hunting_/actions/workflows/ci.yml)
-[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://www.docker.com/)
 [![MITRE ATT&CK](https://img.shields.io/badge/MITRE-ATT%26CK-red.svg)](https://attack.mitre.org/)
-[![Powered by AI](https://img.shields.io/badge/Powered%20by-AI-green.svg)](https://groq.com/)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://www.docker.com/)
 
-> **AI-powered CLI tool for managing, searching, and analyzing threat hunting playbooks with real-time detection queries for Splunk, Elastic, and Sigma.**
+---
 
-## 📋 Overview
+## Executive Summary
 
-The Threat Hunting Playbook is a production-ready CLI tool designed for security analysts, threat hunters, and SOC teams. It provides:
+**Threat Hunting Playbook** is a centralized knowledge management platform for security operations teams. It combines a comprehensive library of detection playbooks with an interactive MITRE ATT&CK matrix visualization, enabling security analysts to quickly identify coverage gaps and deploy production-ready detection queries across multiple SIEM platforms.
 
-- **🔍 Advanced Search**: Find playbooks by technique, tactic, tag, or keyword
-- **🤖 AI Assistant**: Get AI-powered explanations, generate query variants, and receive investigation suggestions
-- **📊 Multi-SIEM Support**: Export queries for Splunk (SPL), Elastic (KQL), and Sigma
-- **🎨 Rich Terminal UI**: Beautiful, color-coded output with syntax highlighting
-- **🏗️ MITRE ATT&CK Mapped**: All playbooks mapped to MITRE ATT&CK framework
-- **⚡ Production-Ready**: Real, tested detection queries ready to deploy
+### Key Metrics (v3.0)
+| Metric | Value |
+|--------|-------|
+| Total Playbooks | 49 |
+| MITRE Techniques Covered | 48 |
+| Framework Coverage | 24.9% |
+| Supported SIEMs | 3 (Splunk, Elastic, Sigma) |
+| All 14 MITRE Tactics | Covered |
 
-## ✨ Features
+---
 
-### Core Functionality
-- **Playbook Management**: Browse, search, and view detailed threat hunting playbooks
-- **Query Export**: Export detection queries in multiple SIEM formats
-- **MITRE Integration**: Automatic MITRE ATT&CK technique and tactic mapping
-- **Validation**: JSON schema validation for all playbooks
+## Motivation
 
-### AI-Powered Features (requires API key)
-- **Explain Playbooks**: Get detailed explanations of attack techniques and detection logic
-- **Ask Questions**: Free-form questions to the AI security expert
-- **Investigation Suggestions**: Get next steps when you find suspicious activity
-- **Generate Variants**: Adapt playbooks to different environments (Azure AD, Linux, etc.)
+Modern Security Operations Centers face significant challenges:
 
-### Included Playbooks (8 Complete)
-1. **PB-T1566-001**: Phishing Email Detection (T1566 - Initial Access)
-2. **PB-T1059-001**: Malicious Command Execution (T1059 - Execution)
-3. **PB-T1003-001**: OS Credential Dumping (T1003 - Credential Access)
-4. **PB-T1021-001**: Lateral Movement via Remote Services (T1021 - Lateral Movement)
-5. **PB-T1547-001**: Boot/Logon Persistence (T1547 - Persistence)
-6. **PB-T1486-001**: Ransomware Detection (T1486 - Impact)
-7. **PB-T1562-001**: Security Tool Tampering (T1562 - Defense Evasion)
-8. **PB-T1087-001**: Account Discovery (T1087 - Discovery)
+1. **Fragmented Knowledge**: Detection logic is scattered across wikis, tickets, and individual analyst notes
+2. **Coverage Blind Spots**: Teams lack visibility into which attack techniques they can actually detect
+3. **SIEM Lock-in**: Detection rules are often written for a single platform, limiting portability
+4. **Onboarding Friction**: New analysts struggle to understand existing detection capabilities
 
-Each playbook includes:
-- Complete YAML metadata with MITRE mapping
-- Real, production-ready queries for Splunk, Elastic, and Sigma
-- Investigation steps and false positive guidance
-- IOCs and references
+**Threat Hunting Playbook** addresses these challenges by providing:
 
-## 🚀 Quick Start
+- **Single Source of Truth**: All detection playbooks in one searchable, version-controlled repository
+- **Visual Coverage Analysis**: Interactive MITRE ATT&CK heatmap showing exactly where gaps exist
+- **Multi-SIEM Support**: Every playbook includes queries for Splunk (SPL), Elastic (KQL), and Sigma
+- **AI-Powered Assistance**: Get explanations, generate variants, and receive investigation guidance
+- **Self-Service Management**: Create, edit, and organize playbooks through web UI or CLI
 
-### Option 1: Docker (Recommended) 🐳
+---
+
+## Features
+
+### Core Platform
+- **49 Production-Ready Playbooks** covering all 14 MITRE ATT&CK tactics
+- **Interactive MITRE Matrix** with heatmap visualization and drill-down navigation
+- **Full CRUD Operations** for playbook management via web UI
+- **Multi-SIEM Export** supporting Splunk SPL, Elastic KQL, and Sigma formats
+- **RESTful API** for integration with existing security tooling
+
+### AI Assistant (Optional)
+- **Playbook Explanations**: Understand attack techniques and detection logic
+- **Query Generation**: Create variants for different environments
+- **Investigation Guidance**: Get next steps when threats are detected
+- **Gap Analysis**: AI-powered recommendations for improving coverage
+
+### Web Interface
+- **Dashboard** with coverage statistics and recent activity
+- **Playbook Browser** with advanced search and filtering
+- **MITRE Matrix View** with interactive coverage visualization
+- **Settings Panel** for API and AI configuration
+
+---
+
+## Quick Start
+
+### Option 1: Docker (Recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/Johnny9802/threat_hunting_.git
 cd threat-hunting-playbook
-
-# Configure (optional - for AI features)
-cp .env.example .env
-# Edit .env and add GROQ_API_KEY or OPENAI_API_KEY
 
 # Start all services
 ./docker-run.sh up
 
-# Access the API
-open http://localhost:8000/docs
+# Access the application
+# API: http://localhost:8000/docs
+# Web UI: http://localhost:3000
 ```
 
-**That's it!** The API, database, and cache are now running.
-
-See [DOCKER.md](DOCKER.md) for full Docker documentation.
-
-### Option 2: Local Installation
+### Option 2: Local Development
 
 ```bash
-# Clone the repository
+# Clone and setup backend
 git clone https://github.com/Johnny9802/threat_hunting_.git
 cd threat-hunting-playbook
-
-# Create virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+source venv/bin/activate
 pip install -r requirements.txt
 
-# Install the package
+# Start API server
+uvicorn api.main:app --reload --port 8000
+
+# In a new terminal, start frontend
+cd guiweb
+npm install
+npm run dev
+```
+
+### CLI Usage
+
+```bash
+# Install CLI
 pip install -e .
-```
 
-### Basic Setup
-
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit .env and add your API key (optional, for AI features)
-# Get free Groq API key at: https://console.groq.com/keys
-nano .env
-```
-
-### First Commands
-
-```bash
 # List all playbooks
 hunt list
 
-# Search for phishing playbooks
-hunt search phishing
+# Search by technique
+hunt search --technique T1003
 
-# View a specific playbook
-hunt show PB-T1566-001
+# View playbook details
+hunt show PB-T1003-001
 
-# Export a query for Splunk
-hunt export PB-T1566-001 --siem splunk
+# Export query for Splunk
+hunt export PB-T1003-001 --siem splunk
 ```
 
-## 📖 Usage Guide
+---
 
-### Searching Playbooks
-
-```bash
-# Free-text search
-hunt search "credential dumping"
-
-# Search by MITRE technique
-hunt search --technique T1566
-
-# Search by tactic
-hunt search --tactic initial-access
-
-# Search by tag
-hunt search --tag powershell
-
-# Search by severity
-hunt search --severity critical
-
-# Combine filters
-hunt search --tactic execution --severity high
-```
-
-### Viewing Playbooks
-
-```bash
-# Show detailed playbook with syntax-highlighted queries
-hunt show PB-T1566-001
-
-# Export as JSON
-hunt show PB-T1566-001 --format json
-```
-
-### Exporting Queries
-
-```bash
-# Export single query to stdout
-hunt export PB-T1566-001 --siem splunk
-
-# Export to file
-hunt export PB-T1566-001 --siem elastic --output phishing.kql
-
-# Export all queries for a playbook
-hunt export-all PB-T1566-001 --output ./exports
-
-# Export all playbooks for a specific SIEM
-hunt export-all --siem sigma --output ./sigma-rules
-```
-
-### AI Assistant Commands
-
-**Prerequisites**: Set `GROQ_API_KEY` or `OPENAI_API_KEY` in `.env` file
-
-```bash
-# Explain a playbook in detail
-hunt ai explain PB-T1566-001
-
-# Ask a security question
-hunt ai ask "How do I detect mimikatz in Splunk?"
-
-# Get investigation suggestions
-hunt ai suggest --found "User executed suspicious PowerShell with base64 encoding"
-
-# Generate a variant for different environment
-hunt ai generate PB-T1566-001 --target "Azure AD" --siem elastic
-```
-
-## 🎨 Example Output
-
-### List Playbooks
-```
-┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
-┃ ID            ┃ Name                               ┃ Technique ┃ Tactic            ┃ Severity ┃
-┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
-│ PB-T1003-001  │ OS Credential Dumping Detection    │ T1003     │ credential-access │ CRITICAL │
-│ PB-T1059-001  │ Malicious Command Execution        │ T1059     │ execution         │ HIGH     │
-│ PB-T1566-001  │ Phishing Email Detection           │ T1566     │ initial-access    │ HIGH     │
-└───────────────┴────────────────────────────────────┴───────────┴───────────────────┴──────────┘
-```
-
-### Show Playbook
-```
-╭─────────────────────────── PB-T1566-001 ───────────────────────────╮
-│ Phishing Email Detection and Analysis                             │
-│ Detect and investigate phishing emails with malicious attachments │
-╰────────────────────────────────────────────────────────────────────╯
-
-Metadata
-  MITRE Technique  T1566 - Phishing (initial-access)
-  Severity         HIGH
-  Author           Threat Hunting Team
-  Created          2024-01-15
-
-Hunt Hypothesis
-╭────────────────────────────────────────────────────────────────────╮
-│ Adversaries frequently use phishing as an initial access vector... │
-╰────────────────────────────────────────────────────────────────────╯
-
-Detection Queries
-[Syntax-highlighted queries displayed here]
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create a `.env` file based on `.env.example`:
-
-```bash
-# Groq API (recommended - free tier available)
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=llama-3.1-70b-versatile
-
-# OpenAI API (fallback)
-OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-4-turbo-preview
-
-# Default provider
-AI_PROVIDER=groq  # or openai
-```
-
-### Getting API Keys
-
-#### Groq (Recommended - Free)
-1. Visit https://console.groq.com/keys
-2. Sign up for a free account
-3. Create an API key
-4. Add to `.env` as `GROQ_API_KEY`
-
-#### OpenAI (Paid)
-1. Visit https://platform.openai.com/api-keys
-2. Create an API key
-3. Add to `.env` as `OPENAI_API_KEY`
-
-## 📁 Project Structure
+## Architecture
 
 ```
 threat-hunting-playbook/
-├── README.md                    # This file
-├── requirements.txt             # Python dependencies
-├── setup.py                     # Package setup
-├── .env.example                 # Environment template
-├── .gitignore                   # Git ignore rules
-├── playbooks/
-│   ├── schema.json              # Playbook validation schema
-│   └── techniques/
-│       ├── T1566-phishing/
-│       │   ├── playbook.yaml    # Playbook metadata
-│       │   └── queries/
-│       │       ├── splunk.spl   # Splunk query
-│       │       ├── elastic.kql  # Elastic query
-│       │       └── sigma.yml    # Sigma rules
-│       ├── T1059-command-execution/
-│       │   ├── playbook.yaml
-│       │   └── queries/
-│       └── T1003-credential-dumping/
+├── api/                    # FastAPI backend
+│   └── main.py            # API endpoints
+├── guiweb/                 # React frontend
+│   └── src/
+│       ├── components/    # UI components
+│       └── services/      # API client
+├── playbooks/             # Detection playbooks
+│   └── techniques/        # Organized by MITRE technique
+│       └── T1003-*/       # Example: Credential Dumping
 │           ├── playbook.yaml
 │           └── queries/
-├── src/
-│   ├── __init__.py
-│   ├── cli.py                   # CLI interface (click + rich)
-│   ├── parser.py                # YAML playbook parser
-│   ├── search.py                # Search functionality
-│   ├── exporter.py              # Query export module
-│   ├── ai_assistant.py          # AI integration (Groq/OpenAI)
-│   └── mitre_mapping.py         # MITRE ATT&CK utilities
-└── tests/
-    ├── test_parser.py
-    ├── test_search.py
-    └── test_ai.py
+│               ├── splunk.spl
+│               ├── elastic.kql
+│               └── sigma.yml
+├── src/                   # CLI and core logic
+│   ├── cli.py            # Command-line interface
+│   ├── parser.py         # YAML parser
+│   ├── search.py         # Search engine
+│   └── ai_assistant.py   # AI integration
+└── scripts/              # Utility scripts
 ```
 
-## 🤝 Contributing
+---
 
-We welcome contributions! Here's how to add a new playbook:
+## Playbook Coverage
 
-### 1. Create Playbook Directory
+### By Tactic
+
+| Tactic | Techniques | Playbooks |
+|--------|------------|-----------|
+| Reconnaissance | 2 | 2 |
+| Resource Development | 1 | 1 |
+| Initial Access | 4 | 4 |
+| Execution | 6 | 6 |
+| Persistence | 5 | 5 |
+| Privilege Escalation | 2 | 2 |
+| Defense Evasion | 5 | 5 |
+| Credential Access | 5 | 5 |
+| Discovery | 4 | 4 |
+| Lateral Movement | 4 | 4 |
+| Collection | 2 | 2 |
+| Command and Control | 3 | 3 |
+| Exfiltration | 3 | 3 |
+| Impact | 2 | 3 |
+
+### Notable Detections
+
+- **Credential Theft**: LSASS dumping, Kerberoasting, password spraying
+- **Execution**: PowerShell abuse, WMI execution, malicious scripts
+- **Persistence**: Registry run keys, scheduled tasks, services
+- **Lateral Movement**: RDP, SMB, PsExec patterns
+- **Evasion**: Log clearing, security tool tampering, masquerading
+- **Exfiltration**: DNS tunneling, cloud storage abuse, C2 channels
+
+---
+
+## API Reference
+
+### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/playbooks` | List all playbooks |
+| GET | `/api/playbooks/{id}` | Get playbook details |
+| POST | `/api/playbooks` | Create new playbook |
+| PUT | `/api/playbooks/{id}` | Update playbook |
+| DELETE | `/api/playbooks/{id}` | Delete playbook |
+| GET | `/api/mitre/gaps` | Coverage gap analysis |
+| POST | `/api/ai/explain` | AI playbook explanation |
+| POST | `/api/ai/ask` | Ask AI assistant |
+| GET | `/api/ai/status` | AI configuration status |
+
+Full API documentation available at `http://localhost:8000/docs`
+
+---
+
+## Configuration
+
+### Environment Variables
 
 ```bash
-mkdir -p playbooks/techniques/TXXXX-technique-name/queries
+# API Configuration
+VITE_API_BASE_URL=http://localhost:8000
+
+# AI Provider (optional)
+AI_PROVIDER=groq          # or openai
+GROQ_API_KEY=gsk_...      # Free at console.groq.com
+OPENAI_API_KEY=sk-...     # platform.openai.com
 ```
 
-### 2. Create `playbook.yaml`
+### AI Setup
 
-Follow the schema in `playbooks/schema.json`:
+1. **Groq (Recommended - Free)**
+   - Visit https://console.groq.com/keys
+   - Create free account and API key
+   - Configure in Settings > AI Assistant
+
+2. **OpenAI**
+   - Visit https://platform.openai.com/api-keys
+   - Create API key
+   - Configure in Settings > AI Assistant
+
+---
+
+## Contributing
+
+### Adding a Playbook
+
+1. Create directory: `playbooks/techniques/TXXXX-name/`
+2. Add `playbook.yaml` with metadata
+3. Add queries in `queries/` subdirectory
+4. Test with `hunt show PB-TXXXX-001`
+5. Submit pull request
+
+### Playbook Schema
 
 ```yaml
 id: PB-TXXXX-001
-name: "Your Playbook Name"
+name: "Detection Name"
 description: "Brief description"
 
 mitre:
   technique: TXXXX
   tactic: tactic-name
-  subtechniques: [TXXXX.001]
+  subtechniques: []
 
-severity: high|medium|low|critical
-author: Your Name
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
+severity: critical|high|medium|low
+author: "Your Name"
+created: "YYYY-MM-DD"
 
 data_sources:
-  - Required log sources
+  - "Required log source"
 
 hunt_hypothesis: |
-  Detailed narrative about what you're hunting for...
-
-queries:
-  splunk: queries/splunk.spl
-  elastic: queries/elastic.kql
-  sigma: queries/sigma.yml
+  What you're looking for and why...
 
 investigation_steps:
-  - Step 1
-  - Step 2
+  - "Step 1"
+  - "Step 2"
 
 false_positives:
-  - Possible FP 1
+  - "Known FP scenario"
 
 tags: [tag1, tag2]
 ```
 
-### 3. Add Queries
+---
 
-Create query files in `queries/` subdirectory:
-- `splunk.spl` - Splunk SPL queries
-- `elastic.kql` - Elastic KQL queries
-- `sigma.yml` - Sigma rules
+## Roadmap
 
-### 4. Validate
+### v3.1 (Planned)
+- [ ] Splunk App integration for direct deployment
+- [ ] Bulk import/export functionality
+- [ ] Playbook templates library
+- [ ] Team collaboration features
 
-```bash
-# Test that your playbook loads correctly
-hunt show PB-TXXXX-001
-```
-
-### 5. Submit Pull Request
-
-1. Fork the repository
-2. Create a feature branch
-3. Add your playbook
-4. Submit PR with description
-
-## 🧪 Testing
-
-```bash
-# Run tests
-pytest tests/
-
-# Run specific test
-pytest tests/test_parser.py
-
-# Run with coverage
-pytest --cov=src tests/
-```
-
-## 🛣️ Roadmap
-
-- [ ] **Advanced Features**
-  - [ ] Query validation and testing framework
-  - [ ] Integration with MITRE ATT&CK Navigator
-  - [ ] Playbook versioning and change tracking
-  - [ ] Custom playbook templates
-
-- [ ] **More Playbooks**
-  - [ ] Lateral Movement (T1021)
-  - [ ] Persistence Mechanisms (T1547)
-  - [ ] Defense Evasion (T1562)
-  - [ ] Collection (T1560)
-  - [ ] Exfiltration (T1041)
-
-- [ ] **Integrations**
-  - [ ] Direct SIEM API integration (auto-deploy queries)
-  - [ ] Threat intelligence feed integration
-  - [ ] SOAR platform connectors
-  - [ ] Ticketing system integration
-
-- [ ] **UI Enhancements**
-  - [ ] Web dashboard
-  - [ ] Playbook dependency graphs
-  - [ ] Timeline visualization
-  - [ ] Interactive query builder
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **MITRE ATT&CK** - Framework and technique definitions
-- **Sigma Project** - Detection rule format
-- **Splunk** & **Elastic** - SIEM platforms
-- **Groq** - Fast AI inference
-- **Click** & **Rich** - CLI framework and terminal formatting
-
-## 📧 Contact
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/threat-hunting-playbook/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/threat-hunting-playbook/discussions)
-- **Email**: security@example.com
-
-## ⚠️ Disclaimer
-
-This tool is provided for legitimate security research, threat hunting, and defensive security operations. Always ensure you have proper authorization before deploying detection queries in production environments. The authors are not responsible for misuse or damage caused by this tool.
+### v3.2 (Planned)
+- [ ] Threat intelligence feed integration
+- [ ] Automated playbook testing
+- [ ] SOAR platform connectors
+- [ ] Advanced analytics dashboard
 
 ---
 
-**Built with ❤️ by the Threat Hunting Community**
+## License
 
-*Happy Hunting! 🎯*
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## Links
+
+- **Repository**: https://github.com/Johnny9802/threat_hunting_
+- **Issues**: https://github.com/Johnny9802/threat_hunting_/issues
+- **Documentation**: [NEW_FEATURES.md](NEW_FEATURES.md)
+
+---
+
+**Built for Security Teams** | Version 3.0.0

@@ -1,0 +1,22 @@
+`comment("=== PB-T1558-003 - Kerberoasting Detection ===")`
+`comment("MITRE ATT&CK: T1558.003 - credential-access")`
+
+`comment("Kerberos TGS Requests for Suspicious Encryption")`
+index=windows sourcetype=windows:security EventCode=4769
+| where TicketEncryptionType="0x17" OR TicketEncryptionType="0x18"
+| stats count by ServiceName, IpAddress, TargetUserName, TicketEncryptionType
+| where count > 1
+| table ServiceName, IpAddress, TargetUserName, TicketEncryptionType, count
+
+`comment("Mass Service Ticket Requests")`
+index=windows sourcetype=windows:security EventCode=4769
+| bin _time span=5m
+| stats dc(ServiceName) as unique_services by TargetUserName, IpAddress, _time
+| where unique_services > 10
+| table _time, TargetUserName, IpAddress, unique_services
+
+`comment("TGS Requests for Service Accounts")`
+index=windows sourcetype=windows:security EventCode=4769
+| lookup service_accounts servicename as ServiceName OUTPUT is_service_account
+| where is_service_account=1
+| stats count by ServiceName, TargetUserName, IpAddress

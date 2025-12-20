@@ -1,0 +1,27 @@
+`comment("=== PB-T1071-004 - DNS Tunneling and C2 Detection ===")`
+`comment("MITRE ATT&CK: T1071.004 - command-and-control")`
+
+`comment("Long DNS Queries (Potential Tunneling)")`
+index=dns sourcetype=dns OR sourcetype=named
+| eval query_len=len(query)
+| where query_len > 50
+| table _time, src_ip, query, query_len
+
+`comment("High Volume DNS to Single Domain")`
+index=dns sourcetype=dns OR sourcetype=named
+| rex field=query "(?<domain>[^.]+\.[^.]+)$"
+| stats count by src_ip, domain
+| where count > 500
+| table src_ip, domain, count
+
+`comment("TXT Record Queries (Common C2)")`
+index=dns sourcetype=dns OR sourcetype=named record_type=TXT
+| stats count by src_ip, query
+| where count > 10
+| table src_ip, query, count
+
+`comment("Encoded Subdomain Pattern")`
+index=dns sourcetype=dns OR sourcetype=named
+| rex field=query "^(?<subdomain>[a-z0-9]{20,})\."
+| where isnotnull(subdomain)
+| table _time, src_ip, query, subdomain

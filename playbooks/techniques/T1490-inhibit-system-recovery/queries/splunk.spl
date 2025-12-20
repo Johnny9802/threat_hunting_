@@ -1,0 +1,22 @@
+`comment("=== PB-T1490-001 - Inhibit System Recovery Detection ===")`
+`comment("MITRE ATT&CK: T1490 - impact")`
+
+`comment("VSS Shadow Copy Deletion")`
+index=sysmon EventCode=1
+| where Image LIKE "%\vssadmin.exe" AND CommandLine LIKE "%delete%shadow%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("WMIC Shadow Copy Delete")`
+index=sysmon EventCode=1 Image="*\wmic.exe"
+| where CommandLine LIKE "%shadowcopy%delete%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("BCDEdit Recovery Disable")`
+index=sysmon EventCode=1 Image="*\bcdedit.exe"
+| where CommandLine LIKE "%recoveryenabled%No%" OR CommandLine LIKE "%bootstatuspolicy%ignoreallfailures%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("Backup Catalog Deletion")`
+index=sysmon EventCode=1 Image="*\wbadmin.exe"
+| where CommandLine LIKE "%delete%catalog%" OR CommandLine LIKE "%delete%systemstatebackup%"
+| table _time, ComputerName, User, CommandLine

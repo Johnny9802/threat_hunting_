@@ -1,0 +1,15 @@
+// === PB-T1070-001 - Windows Event Log Clearing Detection ===
+// MITRE ATT&CK: T1070.001 - defense-evasion
+
+// Security log cleared
+event.code:1102
+
+// wevtutil clearing logs
+event.code:1 AND process.name:wevtutil.exe AND process.command_line:(*cl* OR *clear-log*)
+
+// PowerShell clearing logs
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+process.command_line:(*Clear-EventLog* OR *Remove-EventLog*)
+
+// System log cleared
+event.code:104 AND winlog.channel:System

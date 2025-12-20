@@ -1,0 +1,17 @@
+title: Process Discovery Commands
+id: t1234567-process-discovery-001
+status: production
+level: low
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_tasklist:
+        Image|endswith: '\tasklist.exe'
+    selection_wmic:
+        Image|endswith: '\wmic.exe'
+        CommandLine|contains: 'process'
+    condition: selection_tasklist or selection_wmic
+tags:
+    - attack.discovery
+    - attack.t1057

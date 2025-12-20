@@ -1,0 +1,48 @@
+id: PB-T1570-001
+name: "Lateral Tool Transfer Detection"
+description: "Detect transfer of tools and payloads between systems for lateral movement"
+
+mitre:
+  technique: T1570
+  tactic: lateral-movement
+  subtechniques: []
+
+severity: high
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Network Traffic"
+  - "File Creation"
+  - "SMB Logs"
+
+hunt_hypothesis: |
+  Adversaries transfer tools between compromised systems:
+  1. PsExec and similar tools via SMB
+  2. certutil, bitsadmin for file downloads
+  3. PowerShell remoting file transfers
+  4. SMB file copies between workstations
+  5. Admin share access patterns
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Identify source and destination systems"
+  - "Analyze transferred file types and names"
+  - "Check for execution of transferred files"
+  - "Review authentication events around transfer time"
+  - "Look for tool staging directories"
+
+false_positives:
+  - "Software deployment"
+  - "System administration"
+  - "Backup operations"
+
+tags: ['lateral-movement', 'tool-transfer', 'smb', 'psexec']
+
+references:
+  - "https://attack.mitre.org/techniques/T1570/"

@@ -1,0 +1,25 @@
+`comment("=== PB-T1059-001 - Malicious PowerShell Execution Detection ===")`
+`comment("MITRE ATT&CK: T1059.001 - execution")`
+
+`comment("Encoded PowerShell Commands")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| where CommandLine LIKE "%-e %" OR CommandLine LIKE "%-enc %" OR CommandLine LIKE "%-encodedcommand %"
+| rex field=CommandLine "(?:-e|-enc|-encodedcommand)\s+(?<encoded_cmd>[A-Za-z0-9+/=]+)"
+| eval decoded = base64decode(encoded_cmd)
+| table _time, ComputerName, User, CommandLine, decoded
+
+`comment("PowerShell Download Cradles")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| where CommandLine LIKE "%IEX%" OR CommandLine LIKE "%Invoke-Expression%" OR CommandLine LIKE "%DownloadString%" OR CommandLine LIKE "%Net.WebClient%" OR CommandLine LIKE "%Start-BitsTransfer%"
+| table _time, ComputerName, User, CommandLine, ParentImage
+
+`comment("AMSI Bypass Attempts")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| where CommandLine LIKE "%amsi%" OR CommandLine LIKE "%AmsiUtils%" OR CommandLine LIKE "%amsiInitFailed%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("Suspicious PowerShell from Office")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| rex field=ParentImage "(?<parent>[^\\]+)$"
+| where parent IN ("winword.exe", "excel.exe", "outlook.exe", "powerpnt.exe")
+| table _time, ComputerName, User, ParentImage, CommandLine

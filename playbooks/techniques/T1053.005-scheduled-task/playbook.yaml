@@ -1,0 +1,46 @@
+id: PB-T1053-005
+name: "Malicious Scheduled Task Detection"
+description: "Detect creation of scheduled tasks for persistence including hidden tasks and encoded payloads"
+
+mitre:
+  technique: T1053.005
+  tactic: persistence
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Sysmon
+  - Task Scheduler Logs
+
+hunt_hypothesis: |
+  Adversaries create scheduled tasks for:
+  1. Execution at specific times
+  2. Persistence across reboots
+  3. Running with elevated privileges
+  4. Triggering on specific events
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Review task actions and triggers
+  - Check task creation context (user, process)
+  - Analyze encoded or obfuscated commands
+  - Verify task is not legitimate software
+
+false_positives:
+  - Software installations
+  - Windows updates
+  - IT management tools
+
+references:
+  - https://attack.mitre.org/techniques/T1053/
+
+tags: [persistence, scheduled-task, windows]

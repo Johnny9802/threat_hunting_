@@ -1,0 +1,89 @@
+id: PB-T1595-001
+name: "Active Scanning and Network Reconnaissance Detection"
+description: "Detect adversaries actively probing infrastructure for vulnerabilities, open ports, and running services using tools like Nmap, Masscan, or custom scanners"
+
+mitre:
+  technique: T1595
+  tactic: reconnaissance
+  subtechniques: [T1595.001, T1595.002, T1595.003]
+
+severity: medium
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2024-12-20
+
+data_sources:
+  - Network Traffic Flow (NetFlow/IPFIX)
+  - Firewall Logs (Palo Alto, Fortinet, Cisco ASA)
+  - IDS/IPS Logs (Snort, Suricata, Zeek)
+  - Web Application Firewall Logs
+  - Cloud VPC Flow Logs (AWS, Azure, GCP)
+
+hunt_hypothesis: |
+  Adversaries conduct active reconnaissance to identify potential entry points before launching attacks.
+  This includes:
+
+  1. Port scanning to identify open services (SYN scans, TCP connect scans)
+  2. Vulnerability scanning using tools like Nessus, OpenVAS, or custom scripts
+  3. Service enumeration to identify software versions
+  4. Web application scanning for common vulnerabilities
+
+  Detection focuses on identifying:
+  - High volume of connection attempts from single source
+  - Sequential port access patterns
+  - Known scanner user agents
+  - Connections to honeypot services
+  - Failed connection attempts followed by successful ones
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify the source IP and check threat intelligence feeds (VirusTotal, AbuseIPDB, Shodan)
+  - Review connection patterns - sequential ports indicate systematic scanning
+  - Check if source IP has historical scanning activity
+  - Correlate with firewall deny logs for full scope of scan
+  - Identify which services/ports were successfully connected to
+  - Check for subsequent exploitation attempts from same source
+  - Review if any credentials were attempted after service discovery
+  - Document scan timing and duration for pattern analysis
+
+false_positives:
+  - Legitimate vulnerability scanners (Qualys, Nessus, Rapid7) from authorized IP ranges
+  - Network monitoring tools performing health checks
+  - Load balancers performing backend server checks
+  - CDN edge nodes probing origin servers
+  - Penetration testing activities (verify with security team)
+  - Shodan/Censys/similar internet-wide scanners
+
+iocs:
+  - type: ip
+    value: "Known scanner ranges"
+    context: "Check against Shodan, Censys, BinaryEdge scanner IP lists"
+  - type: user-agent
+    value: "Nmap Scripting Engine"
+    context: "Default Nmap NSE user agent"
+  - type: user-agent
+    value: "masscan"
+    context: "Masscan default identification"
+
+references:
+  - https://attack.mitre.org/techniques/T1595/
+  - https://nmap.org/book/man-port-scanning-techniques.html
+  - https://www.sans.org/white-papers/36667/
+
+tags: [reconnaissance, scanning, network, nmap, masscan, external]
+
+response:
+  containment:
+    - Block source IP at perimeter firewall if malicious
+    - Add IP to threat intelligence blocklist
+    - Enable rate limiting on affected services
+  eradication:
+    - Review and patch any vulnerabilities discovered during scan
+    - Ensure unnecessary services are disabled
+  recovery:
+    - Monitor for follow-up exploitation attempts
+    - Review access logs for the next 72 hours

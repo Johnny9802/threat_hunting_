@@ -1,0 +1,18 @@
+title: Connection to Newly Registered Domain
+id: a2345678-bcde-2345-6789-bcdef234567a
+status: production
+level: medium
+logsource:
+    category: dns
+detection:
+    selection:
+        query|endswith:
+            - '.xyz'
+            - '.top'
+            - '.club'
+            - '.click'
+            - '.online'
+    condition: selection
+tags:
+    - attack.resource_development
+    - attack.t1583

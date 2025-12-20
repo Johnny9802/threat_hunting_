@@ -1,0 +1,16 @@
+title: RDP Lateral Movement Detection
+id: v1234567-rdp-lateral-001
+status: production
+level: high
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4624
+        LogonType: 10
+    # Additional context needed for correlation
+    condition: selection
+tags:
+    - attack.lateral_movement
+    - attack.t1021.001

@@ -1,0 +1,17 @@
+title: Potential C2 via Web Service API
+id: 3b234567-4567-bcde-f012-4567b234567d
+status: production
+level: high
+logsource:
+    category: proxy
+detection:
+    selection:
+        c-uri|contains:
+            - 'api.telegram.org'
+            - 'discord.com/api/webhooks'
+            - 'pastebin.com/raw'
+            - 'api.github.com/gists'
+    condition: selection | count() by c-ip > 10
+tags:
+    - attack.command_and_control
+    - attack.t1102

@@ -1,0 +1,11 @@
+// === PB-T1027-001 - Obfuscated Files and Information Detection ===
+// MITRE ATT&CK: T1027 - defense-evasion
+
+// PowerShell obfuscation indicators
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+(process.command_line:*`* OR process.command_line:*-join* OR
+process.command_line:*[char]* OR process.command_line:*-replace*)
+
+// Certutil encoding
+event.code:1 AND process.name:certutil.exe AND
+process.command_line:(*-encode* OR *-decode* OR *-urlcache*)

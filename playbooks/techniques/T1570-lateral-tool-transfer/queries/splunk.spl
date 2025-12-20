@@ -1,0 +1,11 @@
+`comment("SMB File Transfer Detection")`
+index=sysmon EventCode=11
+| search TargetFilename="*\ADMIN$\*" OR TargetFilename="*\C$\*" OR TargetFilename="*\IPC$\*"
+| rex field=TargetFilename "(?<filename>[^\\]+)$"
+| where match(filename, "(?i)\.(exe|dll|ps1|bat|vbs)$")
+| stats count values(TargetFilename) as files by Computer, Image
+
+`comment("PsExec Service Installation")`
+index=wineventlog source="WinEventLog:System" EventCode=7045
+| search ServiceName="PSEXESVC" OR ImagePath="*PSEXESVC*" OR ServiceName IN ("csexec", "remcom", "paexec")
+| stats count by ServiceName, ImagePath, Computer

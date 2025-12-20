@@ -30,6 +30,12 @@ export interface Playbook {
   tags: string[];
   tactic?: string;
   technique?: string;
+  response?: {
+    containment?: string[];
+    eradication?: string[];
+    recovery?: string[];
+    quick_wins?: string[];
+  };
 }
 
 export interface IOC {

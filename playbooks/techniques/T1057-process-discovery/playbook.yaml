@@ -1,0 +1,44 @@
+id: PB-T1057-001
+name: "Process Discovery Detection"
+description: "Detect enumeration of running processes for security tool identification and target selection"
+
+mitre:
+  technique: T1057
+  tactic: discovery
+  subtechniques: []
+
+severity: low
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - Windows Security Events
+
+hunt_hypothesis: |
+  Process discovery helps adversaries:
+  1. Identify security tools running
+  2. Find processes to inject into
+  3. Identify targets for credential theft
+  4. Avoid detection
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Check context of process discovery
+  - Look for subsequent actions based on discovery
+  - Correlate with other suspicious activity
+
+false_positives:
+  - System administration
+  - Monitoring tools
+  - User curiosity
+
+references:
+  - https://attack.mitre.org/techniques/T1057/
+
+tags: [discovery, process, enumeration]

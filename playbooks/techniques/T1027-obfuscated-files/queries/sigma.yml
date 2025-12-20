@@ -1,0 +1,24 @@
+title: PowerShell Obfuscation Detection
+id: o1234567-obfuscation-detect-001
+status: production
+level: medium
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+    obfuscation:
+        CommandLine|contains:
+            - '`'
+            - '-join'
+            - '[char]'
+            - '-replace'
+            - 'iex'
+            - 'invoke-expression'
+    condition: selection and obfuscation
+tags:
+    - attack.defense_evasion
+    - attack.t1027

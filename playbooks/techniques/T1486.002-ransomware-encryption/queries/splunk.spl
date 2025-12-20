@@ -1,0 +1,26 @@
+`comment("=== PB-T1486-002 - Ransomware File Encryption Detection ===")`
+`comment("MITRE ATT&CK: T1486 - impact")`
+
+`comment("Mass File Extension Changes")`
+index=sysmon EventCode=11
+| rex field=TargetFilename "(?<extension>\.[^.]+)$"
+| stats dc(extension) as ext_variety count as file_count by ComputerName, Image
+| where file_count > 100 AND ext_variety < 5
+| table ComputerName, Image, file_count, ext_variety
+
+`comment("Known Ransomware Extensions")`
+index=sysmon EventCode=11
+| where TargetFilename LIKE "%.encrypted%" OR TargetFilename LIKE "%.locked%" OR TargetFilename LIKE "%.crypt%" OR TargetFilename LIKE "%.enc%" OR TargetFilename LIKE "%.xxx%"
+| stats count by ComputerName, Image, TargetFilename
+
+`comment("Ransom Note Creation")`
+index=sysmon EventCode=11
+| where TargetFilename LIKE "%README%DECRYPT%" OR TargetFilename LIKE "%HOW_TO_RECOVER%" OR TargetFilename LIKE "%DECRYPT_INSTRUCTIONS%" OR TargetFilename LIKE "%-DECRYPT-%"
+| table _time, ComputerName, User, Image, TargetFilename
+
+`comment("High Volume File Modifications")`
+index=sysmon EventCode=2
+| bin _time span=1m
+| stats count by ComputerName, Image, _time
+| where count > 100
+| table _time, ComputerName, Image, count

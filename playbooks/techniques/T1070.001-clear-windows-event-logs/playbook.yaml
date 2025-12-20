@@ -1,0 +1,46 @@
+id: PB-T1070-001
+name: "Windows Event Log Clearing Detection"
+description: "Detect attempts to clear Windows Event Logs to hide malicious activity"
+
+mitre:
+  technique: T1070.001
+  tactic: defense-evasion
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Sysmon
+  - PowerShell Logs
+
+hunt_hypothesis: |
+  Adversaries clear logs to:
+  1. Remove evidence of compromise
+  2. Hide lateral movement
+  3. Cover persistence mechanisms
+  4. Avoid detection by SOC
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify who cleared the logs
+  - Check for activity before log clearing
+  - Review other log sources for corroboration
+  - Assume compromise and hunt for other indicators
+
+false_positives:
+  - IT maintenance
+  - Log rotation policies
+  - Disk space issues
+
+references:
+  - https://attack.mitre.org/techniques/T1070/
+
+tags: [defense-evasion, log-clearing, windows]

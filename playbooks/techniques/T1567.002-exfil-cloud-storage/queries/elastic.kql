@@ -1,0 +1,12 @@
+// === PB-T1567-002 - Exfiltration to Cloud Storage Detection ===
+// MITRE ATT&CK: T1567.002 - exfiltration
+
+// Large uploads to cloud storage
+http.request.method:POST AND destination.domain:(*dropbox.com* OR *drive.google.com* OR *onedrive.live.com*)
+| stats sum(http.request.bytes) as upload_bytes by source.ip, user.name
+| where upload_bytes > 50000000
+
+// Off-hours cloud uploads
+http.request.method:POST AND destination.domain:(*dropbox* OR *drive.google* OR *onedrive*)
+| eval hour = date_hour(@timestamp)
+| where hour < 6 or hour > 22

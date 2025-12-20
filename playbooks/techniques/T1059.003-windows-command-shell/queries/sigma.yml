@@ -1,0 +1,22 @@
+title: Suspicious CMD Parent Process
+id: e1234567-cmd-parent-detect-001
+status: production
+level: high
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\cmd.exe'
+    suspicious_parent:
+        ParentImage|endswith:
+            - '\outlook.exe'
+            - '\winword.exe'
+            - '\excel.exe'
+            - '\powerpnt.exe'
+            - '\wmiprvse.exe'
+            - '\mshta.exe'
+    condition: selection and suspicious_parent
+tags:
+    - attack.execution
+    - attack.t1059.003

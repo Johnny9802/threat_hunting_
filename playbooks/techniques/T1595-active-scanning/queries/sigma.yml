@@ -1,0 +1,111 @@
+title: Active Network Scanning Detection
+id: a1b2c3d4-1234-5678-9abc-def012345678
+status: production
+level: medium
+description: Detects active network scanning and reconnaissance activity indicative of T1595
+author: Threat Hunting Team
+date: 2024/01/15
+modified: 2024/12/20
+references:
+    - https://attack.mitre.org/techniques/T1595/
+    - https://nmap.org/book/man-port-scanning-techniques.html
+tags:
+    - attack.reconnaissance
+    - attack.t1595
+    - attack.t1595.001
+    - attack.t1595.002
+logsource:
+    category: firewall
+detection:
+    selection_denied:
+        action:
+            - denied
+            - blocked
+            - drop
+            - reject
+    condition: selection_denied
+    # Note: Aggregate detection requires SIEM-specific implementation
+    # Threshold: >100 connections AND >20 unique ports in 5 minutes
+falsepositives:
+    - Legitimate vulnerability scanners from authorized ranges
+    - Network monitoring tools
+    - Penetration testing activities
+---
+title: Vulnerability Scanner User Agent Detection
+id: b2c3d4e5-2345-6789-abcd-ef0123456789
+status: production
+level: medium
+description: Detects known vulnerability scanner user agents in web logs
+author: Threat Hunting Team
+date: 2024/01/15
+modified: 2024/12/20
+references:
+    - https://attack.mitre.org/techniques/T1595/
+tags:
+    - attack.reconnaissance
+    - attack.t1595
+    - attack.t1595.002
+logsource:
+    category: webserver
+    product: apache
+detection:
+    selection_scanners:
+        cs-user-agent|contains:
+            - 'Nmap'
+            - 'masscan'
+            - 'Nikto'
+            - 'sqlmap'
+            - 'WPScan'
+            - 'Acunetix'
+            - 'Nessus'
+            - 'OpenVAS'
+            - 'OWASP ZAP'
+            - 'Burp Suite'
+            - 'DirBuster'
+            - 'Gobuster'
+            - 'wfuzz'
+            - 'ffuf'
+            - 'nuclei'
+    condition: selection_scanners
+falsepositives:
+    - Authorized security scanning
+    - Bug bounty hunters (if program exists)
+---
+title: Common Vulnerability Path Probing
+id: c3d4e5f6-3456-789a-bcde-f01234567890
+status: production
+level: low
+description: Detects probing of common vulnerable paths and files
+author: Threat Hunting Team
+date: 2024/01/15
+modified: 2024/12/20
+references:
+    - https://attack.mitre.org/techniques/T1595/
+tags:
+    - attack.reconnaissance
+    - attack.t1595.002
+logsource:
+    category: webserver
+detection:
+    selection_paths:
+        cs-uri-stem|contains:
+            - '/admin'
+            - '/wp-admin'
+            - '/phpmyadmin'
+            - '/manager/html'
+            - '/.git/'
+            - '/.env'
+            - '/backup'
+            - '/config'
+            - '/wp-config.php'
+            - '/web.config'
+            - '/.htaccess'
+            - '/etc/passwd'
+            - '/etc/shadow'
+            - '/.aws/credentials'
+            - '/server-status'
+            - '/debug'
+    condition: selection_paths
+falsepositives:
+    - Legitimate admin access
+    - Developers accessing configuration

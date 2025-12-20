@@ -483,6 +483,80 @@ async def get_technique_info(technique_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/mitre/gaps")
+async def get_coverage_gaps() -> Dict[str, Any]:
+    """Analyze MITRE ATT&CK coverage gaps and get AI recommendations."""
+    try:
+        playbooks = search.list_all()
+
+        # Calculate coverage by tactic
+        tactic_coverage = {}
+        covered_techniques = set()
+
+        for pb in playbooks:
+            tactic = pb.get('mitre', {}).get('tactic') or pb.get('tactic', 'unknown')
+            technique = pb.get('mitre', {}).get('technique') or pb.get('technique')
+
+            if tactic not in tactic_coverage:
+                tactic_coverage[tactic] = {
+                    'techniques': set(),
+                    'playbooks': 0
+                }
+
+            if technique:
+                tactic_coverage[tactic]['techniques'].add(technique)
+                covered_techniques.add(technique)
+
+            tactic_coverage[tactic]['playbooks'] += 1
+
+        # Convert sets to lists for JSON
+        for tactic in tactic_coverage:
+            tactic_coverage[tactic]['techniques'] = list(tactic_coverage[tactic]['techniques'])
+
+        # Get AI suggestions for gaps if available
+        suggestions = None
+        if ai.is_available():
+            try:
+                # Create prompt for AI
+                prompt = f"""Analyze this MITRE ATT&CK coverage data and provide recommendations:
+
+Covered Techniques: {len(covered_techniques)}
+Total Techniques in Enterprise: 193
+Coverage: {round(len(covered_techniques) / 193 * 100, 1)}%
+
+Tactics Coverage:
+{chr(10).join([f"- {tactic}: {len(data['techniques'])} techniques, {data['playbooks']} playbooks" for tactic, data in tactic_coverage.items()])}
+
+Please suggest:
+1. Top 3 critical techniques that should be covered based on common attack patterns
+2. Which tactics need more playbooks
+3. Priority recommendations for improving coverage
+
+Keep response concise and actionable."""
+
+                suggestions = ai.ask_question(prompt)
+            except Exception as e:
+                print(f"AI suggestions failed: {e}")
+                suggestions = None
+
+        return {
+            "total_techniques": 193,
+            "covered_techniques": len(covered_techniques),
+            "coverage_percentage": round(len(covered_techniques) / 193 * 100, 1),
+            "tactic_coverage": tactic_coverage,
+            "ai_suggestions": suggestions,
+            "gaps": {
+                "uncovered_count": 193 - len(covered_techniques),
+                "tactics_needing_attention": [
+                    tactic for tactic, data in tactic_coverage.items()
+                    if len(data['techniques']) < 3
+                ]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/ai/explain")
 async def ai_explain(request: ExplainRequest) -> Dict[str, str]:
     """Get AI explanation of a playbook.
@@ -626,6 +700,301 @@ async def get_stats() -> Dict[str, Any]:
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# PLAYBOOK CRUD ENDPOINTS
+# ============================================================================
+
+class CreatePlaybookRequest(BaseModel):
+    """Pydantic model for creating a new playbook."""
+
+    id: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="Unique playbook ID (e.g., PB-T1566-001)",
+        example="PB-T1566-001"
+    )
+    name: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1, max_length=1000)
+
+    mitre: Dict[str, Any] = Field(
+        ...,
+        description="MITRE ATT&CK mapping with technique and tactic"
+    )
+
+    severity: str = Field(..., description="Severity level")
+    author: str = Field(..., min_length=1, max_length=100)
+    data_sources: List[str] = Field(default_factory=list)
+    hunt_hypothesis: str = Field(..., min_length=1)
+    investigation_steps: List[str] = Field(default_factory=list)
+    false_positives: List[str] = Field(default_factory=list)
+    references: List[str] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
+
+    queries_content: Optional[Dict[str, str]] = Field(
+        None,
+        description="Query content for different SIEMs"
+    )
+
+    iocs: Optional[List[Dict[str, str]]] = Field(default_factory=list)
+    response: Optional[Dict[str, List[str]]] = Field(None)
+
+    @validator('id')
+    def validate_id(cls, v):
+        """Validate playbook ID format."""
+        if not re.match(r'^PB-[A-Z0-9]+-\d+$', v):
+            raise ValueError("ID must follow format: PB-TXXXX-NNN")
+        return v
+
+    @validator('severity')
+    def validate_severity(cls, v):
+        """Validate severity level."""
+        valid_severities = ['critical', 'high', 'medium', 'low']
+        if v.lower() not in valid_severities:
+            raise ValueError(f"Severity must be one of: {', '.join(valid_severities)}")
+        return v.lower()
+
+
+class UpdatePlaybookRequest(BaseModel):
+    """Pydantic model for updating a playbook."""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1, max_length=1000)
+    mitre: Optional[Dict[str, Any]] = None
+    severity: Optional[str] = None
+    author: Optional[str] = Field(None, min_length=1, max_length=100)
+    data_sources: Optional[List[str]] = None
+    hunt_hypothesis: Optional[str] = None
+    investigation_steps: Optional[List[str]] = None
+    false_positives: Optional[List[str]] = None
+    references: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    queries_content: Optional[Dict[str, str]] = None
+    iocs: Optional[List[Dict[str, str]]] = None
+    response: Optional[Dict[str, List[str]]] = None
+
+    @validator('severity')
+    def validate_severity(cls, v):
+        """Validate severity level."""
+        if v is None:
+            return v
+        valid_severities = ['critical', 'high', 'medium', 'low']
+        if v.lower() not in valid_severities:
+            raise ValueError(f"Severity must be one of: {', '.join(valid_severities)}")
+        return v.lower()
+
+
+@app.post("/api/playbooks")
+async def create_playbook(request: CreatePlaybookRequest) -> Dict[str, Any]:
+    """Create a new playbook.
+
+    Request body: CreatePlaybookRequest
+
+    Returns:
+        Created playbook data
+    """
+    try:
+        # Check if playbook already exists
+        try:
+            existing = search.get_by_id(request.id)
+            if existing:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Playbook {request.id} already exists"
+                )
+        except FileNotFoundError:
+            pass  # OK, playbook doesn't exist
+
+        # Create playbook directory structure
+        from src.playbook_writer import PlaybookWriter
+        writer = PlaybookWriter()
+
+        playbook_data = request.dict()
+        playbook_data['created'] = datetime.now().isoformat()
+        playbook_data['updated'] = datetime.now().isoformat()
+
+        writer.create_playbook(playbook_data)
+
+        # Clear cache
+        parser._playbooks_cache.clear()
+
+        # Return created playbook
+        return search.get_by_id(request.id)
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/playbooks/{playbook_id}")
+async def update_playbook(
+    playbook_id: str,
+    request: UpdatePlaybookRequest
+) -> Dict[str, Any]:
+    """Update an existing playbook.
+
+    Args:
+        playbook_id: The ID of the playbook to update
+        request: UpdatePlaybookRequest with fields to update
+
+    Returns:
+        Updated playbook data
+    """
+    try:
+        # Check if playbook exists
+        existing = search.get_by_id(playbook_id)
+        if not existing:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Playbook {playbook_id} not found"
+            )
+
+        # Update playbook
+        from src.playbook_writer import PlaybookWriter
+        writer = PlaybookWriter()
+
+        update_data = request.dict(exclude_unset=True)
+        update_data['updated'] = datetime.now().isoformat()
+
+        writer.update_playbook(playbook_id, update_data)
+
+        # Clear cache
+        parser._playbooks_cache.clear()
+
+        # Return updated playbook
+        return search.get_by_id(playbook_id)
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Playbook {playbook_id} not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/playbooks/{playbook_id}")
+async def delete_playbook(playbook_id: str) -> Dict[str, str]:
+    """Delete a playbook.
+
+    Args:
+        playbook_id: The ID of the playbook to delete
+
+    Returns:
+        Success message
+    """
+    try:
+        # Check if playbook exists
+        existing = search.get_by_id(playbook_id)
+        if not existing:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Playbook {playbook_id} not found"
+            )
+
+        # Delete playbook
+        from src.playbook_writer import PlaybookWriter
+        writer = PlaybookWriter()
+        writer.delete_playbook(playbook_id)
+
+        # Clear cache
+        parser._playbooks_cache.clear()
+
+        return {
+            "message": f"Playbook {playbook_id} deleted successfully",
+            "playbook_id": playbook_id
+        }
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Playbook {playbook_id} not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# AI Configuration endpoints
+class AIConfigRequest(BaseModel):
+    """Pydantic model for AI configuration."""
+    provider: str = Field(..., pattern=r'^(groq|openai)$')
+    groq_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+
+
+class AITestRequest(BaseModel):
+    """Pydantic model for AI test request."""
+    provider: str = Field(..., pattern=r'^(groq|openai)$')
+    api_key: str = Field(..., min_length=1)
+
+
+@app.post("/api/config/ai")
+async def configure_ai(request: AIConfigRequest) -> Dict[str, str]:
+    """Configure AI provider and API keys dynamically."""
+    import os
+
+    # Update environment variables
+    if request.provider == 'groq' and request.groq_api_key:
+        os.environ['GROQ_API_KEY'] = request.groq_api_key
+        os.environ['AI_PROVIDER'] = 'groq'
+    elif request.provider == 'openai' and request.openai_api_key:
+        os.environ['OPENAI_API_KEY'] = request.openai_api_key
+        os.environ['AI_PROVIDER'] = 'openai'
+
+    # Reinitialize AI assistant
+    global ai
+    from src.ai_assistant import AIAssistant
+    ai = AIAssistant()
+
+    return {
+        "message": "AI configuration updated",
+        "provider": request.provider,
+        "status": "available" if ai.is_available() else "unavailable"
+    }
+
+
+@app.post("/api/ai/test")
+async def test_ai_connection(request: AITestRequest) -> Dict[str, Any]:
+    """Test AI connection with provided credentials."""
+    import os
+
+    # Temporarily set the API key
+    if request.provider == 'groq':
+        os.environ['GROQ_API_KEY'] = request.api_key
+        os.environ['AI_PROVIDER'] = 'groq'
+    else:
+        os.environ['OPENAI_API_KEY'] = request.api_key
+        os.environ['AI_PROVIDER'] = 'openai'
+
+    # Reinitialize AI assistant
+    from src.ai_assistant import AIAssistant
+    test_ai = AIAssistant()
+
+    if not test_ai.is_available():
+        raise HTTPException(status_code=400, detail="AI service not available with provided credentials")
+
+    try:
+        # Simple test query
+        response = test_ai.ask_question("Say 'test successful' in exactly 2 words")
+        return {
+            "status": "success",
+            "provider": request.provider,
+            "message": "Connection successful"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"AI test failed: {str(e)}")
+
+
+@app.get("/api/ai/status")
+async def get_ai_status() -> Dict[str, Any]:
+    """Get current AI configuration status."""
+    import os
+
+    return {
+        "available": ai.is_available(),
+        "provider": os.environ.get('AI_PROVIDER', 'none'),
+        "groq_configured": bool(os.environ.get('GROQ_API_KEY')),
+        "openai_configured": bool(os.environ.get('OPENAI_API_KEY'))
+    }
 
 
 if __name__ == "__main__":

@@ -87,4 +87,26 @@ export const getStats = async (): Promise<APIStats> => {
   return response.data;
 };
 
+// Playbook CRUD
+export const createPlaybook = async (playbookData: Partial<Playbook>): Promise<Playbook> => {
+  const response = await api.post('/playbooks', playbookData);
+  return response.data;
+};
+
+export const updatePlaybook = async (id: string, playbookData: Partial<Playbook>): Promise<Playbook> => {
+  const response = await api.put(`/playbooks/${id}`, playbookData);
+  return response.data;
+};
+
+export const deletePlaybook = async (id: string): Promise<{ message: string; playbook_id: string }> => {
+  const response = await api.delete(`/playbooks/${id}`);
+  return response.data;
+};
+
+// MITRE Coverage Gaps
+export const getCoverageGaps = async () => {
+  const response = await api.get('/mitre/gaps');
+  return response.data;
+};
+
 export default api;

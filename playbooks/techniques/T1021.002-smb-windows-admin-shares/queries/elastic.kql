@@ -1,0 +1,11 @@
+// === PB-T1021-002 - SMB/Windows Admin Shares Lateral Movement Detection ===
+// MITRE ATT&CK: T1021.002 - lateral-movement
+
+// Admin share access
+event.code:5140 AND winlog.event_data.ShareName:(*C$* OR *ADMIN$* OR *IPC$*)
+
+// Executable file access on admin share
+event.code:5145 AND winlog.event_data.RelativeTargetName:(*.exe* OR *.dll* OR *.ps1*)
+
+// Remote service creation
+event.code:4697
