@@ -1,0 +1,184 @@
+```
+# Boot and Logon Persistence Detection - Splunk SPL Queries
+# Detects registry run keys, startup folders, scheduled tasks, and WMI persistence
+
+# Query 1: Registry Run Keys Modifications
+# Detects creation/modification of autostart registry keys
+index=windows sourcetype="WinEventLog:Microsoft-Windows-Sysmon/Operational" (EventCode=12 OR EventCode=13 OR EventCode=14)
+  (TargetObject="*\\Software\\Microsoft\\Windows\\CurrentVersion\\Run*"
+   OR TargetObject="*\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce*"
+   OR TargetObject="*\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run*"
+   OR TargetObject="*\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run*"
+   OR TargetObject="*\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\*"
+   OR TargetObject="*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders\\*Startup*")
+| eval registry_location=case(
+    match(TargetObject, "(?i)HKCU"), "HKCU (User)",
+    match(TargetObject, "(?i)HKLM"), "HKLM (Machine)",
+    1=1, "Other"
+  )
+| eval event_type=case(
+    EventCode=12, "Registry Key Created",
+    EventCode=13, "Registry Value Set",
+    EventCode=14, "Registry Key Renamed",
+    1=1, "Unknown"
+  )
+| eval is_suspicious_path=if(match(Details, "(?i)(temp|appdata|public|programdata|users|downloads)"), "Yes", "No")
+| eval is_script=if(match(Details, "(?i)(\.ps1|\.vbs|\.js|\.bat|\.cmd|powershell|wscript|cscript)"), "Yes", "No")
+| stats
+    count as modifications,
+    values(TargetObject) as registry_keys,
+    values(Details) as values_set,
+    values(event_type) as events,
+    dc(ComputerName) as affected_hosts
+  by User, Image, registry_location, is_suspicious_path, is_script
+| where modifications > 1 OR is_suspicious_path="Yes" OR is_script="Yes"
+| eval risk_score=case(
+    is_script="Yes" AND is_suspicious_path="Yes", 90,
+    is_suspicious_path="Yes", 70,
+    is_script="Yes", 60,
+    1=1, 40
+  )
+| sort - risk_score, - modifications
+| table User, Image, registry_location, modifications, risk_score, is_suspicious_path, is_script, affected_hosts, registry_keys, values_set
+
+# Query 2: Startup Folder File Creation
+# Detects files added to startup folders
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=11
+  (TargetFilename="*\\Start Menu\\Programs\\Startup\\*"
+   OR TargetFilename="*\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*"
+   OR TargetFilename="*\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*")
+| eval file_extension=lower(replace(TargetFilename, ".*\.(.*)", "\1"))
+| eval is_executable=if(match(file_extension, "(?i)(exe|dll|scr|bat|cmd|vbs|js|ps1|hta|jar)"), "Yes", "No")
+| eval startup_type=case(
+    match(TargetFilename, "(?i)ProgramData"), "All Users",
+    match(TargetFilename, "(?i)AppData\\\\Roaming"), "Current User",
+    1=1, "Unknown"
+  )
+| rex field=TargetFilename "(?<filename>[^\\\\]+)$"
+| stats
+    count as files_created,
+    values(TargetFilename) as full_paths,
+    values(Image) as creating_processes,
+    dc(ComputerName) as hosts_count
+  by User, filename, file_extension, is_executable, startup_type
+| where is_executable="Yes"
+| sort - hosts_count, - files_created
+| table User, filename, file_extension, startup_type, files_created, hosts_count, is_executable, creating_processes, full_paths
+
+# Query 3: Scheduled Task Creation/Modification
+# Detects new or modified scheduled tasks
+index=windows sourcetype="WinEventLog:Security" (EventCode=4698 OR EventCode=4702)
+| eval task_action=if(EventCode=4698, "Created", "Modified")
+| rex field=Task_Content "<Command>(?<command>.*?)</Command>"
+| rex field=Task_Content "<Arguments>(?<arguments>.*?)</Arguments>"
+| eval full_command=command." ".arguments
+| eval is_suspicious=if(match(full_command, "(?i)(powershell|wscript|cscript|cmd|regsvr32|rundll32|mshta|certutil|bitsadmin)"), "Yes", "No")
+| eval has_network=if(match(full_command, "(?i)(http|https|ftp|download|invoke-webrequest|iwr|wget|curl)"), "Yes", "No")
+| eval runs_from_temp=if(match(full_command, "(?i)(temp|appdata|public|programdata)"), "Yes", "No")
+| stats
+    count as task_events,
+    values(Task_Name) as task_names,
+    values(full_command) as commands,
+    values(task_action) as actions,
+    dc(ComputerName) as affected_systems
+  by Account_Name, is_suspicious, has_network, runs_from_temp
+| where is_suspicious="Yes" OR has_network="Yes" OR runs_from_temp="Yes"
+| eval risk_score=case(
+    has_network="Yes" AND runs_from_temp="Yes", 95,
+    is_suspicious="Yes" AND runs_from_temp="Yes", 85,
+    has_network="Yes", 75,
+    is_suspicious="Yes", 65,
+    1=1, 50
+  )
+| sort - risk_score, - task_events
+| table Account_Name, task_events, risk_score, is_suspicious, has_network, runs_from_temp, affected_systems, task_names, commands
+
+# Query 4: WMI Event Subscription Persistence
+# Detects WMI event consumers and filters (advanced persistence)
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=19 OR EventCode=20 OR EventCode=21
+| eval event_type=case(
+    EventCode=19, "WMI Event Filter",
+    EventCode=20, "WMI Event Consumer",
+    EventCode=21, "WMI Filter-Consumer Binding",
+    1=1, "Unknown"
+  )
+| eval is_suspicious=if(match(Consumer, "(?i)(powershell|wscript|cmd|regsvr32|rundll32)"), "Yes", "No")
+| stats
+    count as wmi_events,
+    values(EventNamespace) as namespaces,
+    values(Consumer) as consumers,
+    values(Query) as queries,
+    dc(ComputerName) as hosts
+  by User, event_type, is_suspicious
+| where wmi_events > 0
+| sort - is_suspicious, - wmi_events
+| table User, event_type, wmi_events, is_suspicious, hosts, namespaces, consumers, queries
+
+# Query 5: New Windows Service Creation
+# Detects new services pointing to suspicious locations
+index=windows sourcetype="WinEventLog:System" EventCode=7045
+| eval service_path=lower(Service_File_Name)
+| eval is_suspicious_location=if(match(service_path, "(?i)(temp|appdata|public|programdata|users|downloads)"), "Yes", "No")
+| eval is_non_standard=if(NOT match(service_path, "(?i)(system32|syswow64|program files)"), "Yes", "No")
+| eval has_script=if(match(service_path, "(?i)(powershell|cmd|wscript|cscript|python|java)"), "Yes", "No")
+| stats
+    count as service_count,
+    values(Service_Name) as services,
+    values(Service_File_Name) as service_paths,
+    values(Service_Type) as service_types,
+    dc(ComputerName) as affected_hosts
+  by Account_Name, is_suspicious_location, is_non_standard, has_script
+| where is_suspicious_location="Yes" OR (is_non_standard="Yes" AND has_script="Yes")
+| eval risk_score=case(
+    is_suspicious_location="Yes" AND has_script="Yes", 90,
+    is_suspicious_location="Yes", 80,
+    is_non_standard="Yes" AND has_script="Yes", 70,
+    1=1, 50
+  )
+| sort - risk_score, - service_count
+| table Account_Name, service_count, risk_score, is_suspicious_location, has_script, affected_hosts, services, service_paths
+
+# Query 6: Winlogon Helper DLL Persistence
+# Detects modifications to Winlogon registry keys
+index=windows sourcetype="WinEventLog:Sysmon" (EventCode=12 OR EventCode=13)
+  (TargetObject="*\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Notify*"
+   OR TargetObject="*\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Userinit*"
+   OR TargetObject="*\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell*"
+   OR TargetObject="*\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\*")
+| eval persistence_type=case(
+    match(TargetObject, "Notify"), "Winlogon Notify",
+    match(TargetObject, "Userinit"), "Userinit Hook",
+    match(TargetObject, "Shell"), "Shell Override",
+    match(TargetObject, "Image File Execution"), "IFEO Debugger",
+    1=1, "Other"
+  )
+| stats
+    count as modifications,
+    values(Details) as new_values,
+    values(TargetObject) as registry_keys,
+    dc(ComputerName) as hosts
+  by User, Image, persistence_type
+| sort - modifications
+| table User, Image, persistence_type, modifications, hosts, registry_keys, new_values
+
+# Query 7: AppInit DLLs and AppCert DLLs
+# Detects DLL injection persistence via registry
+index=windows sourcetype="WinEventLog:Sysmon" (EventCode=12 OR EventCode=13)
+  (TargetObject="*\\Microsoft\\Windows NT\\CurrentVersion\\Windows\\AppInit_DLLs*"
+   OR TargetObject="*\\System\\CurrentControlSet\\Control\\Session Manager\\AppCertDlls*"
+   OR TargetObject="*\\SOFTWARE\\Classes\\exefile\\shell\\open\\command*")
+| eval injection_type=case(
+    match(TargetObject, "AppInit_DLLs"), "AppInit DLL",
+    match(TargetObject, "AppCertDlls"), "AppCert DLL",
+    match(TargetObject, "exefile"), "EXE File Association",
+    1=1, "Other"
+  )
+| stats
+    count as changes,
+    values(Details) as dll_paths,
+    values(TargetObject) as keys_modified,
+    dc(Image) as unique_processes
+  by User, injection_type, ComputerName
+| sort - changes
+| table User, ComputerName, injection_type, changes, unique_processes, dll_paths, keys_modified
+```

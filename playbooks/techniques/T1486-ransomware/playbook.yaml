@@ -1,0 +1,81 @@
+id: PB-T1486-001
+name: "Ransomware Detection and Response"
+description: "Detect ransomware activity including file encryption, shadow copy deletion, and backup destruction"
+
+mitre:
+  technique: T1486
+  tactic: impact
+  subtechniques: []
+
+severity: critical
+author: Threat Hunting Team
+created: 2025-12-20
+updated: 2025-12-20
+
+data_sources:
+  - Windows Event Logs
+  - Sysmon (Event IDs 1, 11, 23)
+  - File System Monitoring
+  - Network Traffic
+  - EDR Telemetry
+
+hunt_hypothesis: |
+  Ransomware causes massive business impact through data encryption. Early detection
+  is critical. This playbook hunts for:
+
+  1. Rapid file encryption patterns (mass file modifications/renames)
+  2. Shadow copy and backup deletion (vssadmin, wbadmin, bcdedit)
+  3. Ransomware note creation (.txt, .html files)
+  4. Volume encryption (cipher.exe, bitlocker abuse)
+  5. Known ransomware process names and behaviors
+  6. High entropy file creation (encrypted files)
+  7. Network shares being encrypted
+
+  Ransomware typically exhibits multiple indicators simultaneously. Detection should
+  trigger immediate incident response and isolation procedures.
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - IMMEDIATELY isolate affected systems from network
+  - Identify ransomware variant (ransom note, file extensions)
+  - Determine patient zero and initial infection vector
+  - Check backup integrity and availability
+  - Search for additional infected systems
+  - Review network traffic for C2 communication and exfiltration
+  - Identify if data was exfiltrated (double extortion)
+  - Contact law enforcement and insurance
+  - DO NOT pay ransom without consultation
+  - Begin recovery from clean backups
+
+false_positives:
+  - Legitimate backup software
+  - Disk encryption tools (BitLocker, VeraCrypt)
+  - Large file operations by authorized users
+  - Software updates and installations
+  - Archiving and compression tools
+
+iocs:
+  - type: file
+    value: "*.locked"
+    context: "Common ransomware file extension"
+  - type: file
+    value: "README.txt"
+    context: "Typical ransom note filename"
+  - type: file
+    value: "HOW_TO_DECRYPT.html"
+    context: "Ransom note"
+  - type: domain
+    value: "*.onion"
+    context: "Tor payment sites"
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+  - https://www.cisa.gov/stopransomware
+  - https://www.nomoreransom.org/
+  - https://www.microsoft.com/en-us/security/blog/2023/07/06/the-five-stages-of-ransomware/
+
+tags: [ransomware, encryption, impact, shadow-copy, backup-deletion, critical]

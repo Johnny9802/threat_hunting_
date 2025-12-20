@@ -1,0 +1,47 @@
+id: PB-T1087-001
+name: "Account Discovery and Enumeration"
+description: "Detect adversary reconnaissance of user accounts, groups, and permissions"
+
+mitre:
+  technique: T1087
+  tactic: discovery
+  subtechniques: [T1087.001, T1087.002]
+
+severity: medium
+author: Threat Hunting Team
+created: 2025-12-20
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Event Logs (Event ID 4798, 4799)
+  - Command Line Logging
+  - Active Directory Logs
+  - Network Traffic
+
+hunt_hypothesis: |
+  Adversaries enumerate accounts and groups to understand the environment and identify
+  high-value targets. This playbook hunts for:
+
+  1. net user / net group enumeration
+  2. LDAP queries for users and groups
+  3. PowerView and BloodHound usage
+  4. Active Directory reconnaissance tools
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify the user performing discovery
+  - Check if account is compromised
+  - Review what was discovered
+  - Search for follow-on activity (lateral movement)
+  - Verify if legitimate IT activity
+
+false_positives:
+  - IT administration
+  - Help desk operations
+  - Security audits
+
+tags: [discovery, enumeration, reconnaissance, active-directory]

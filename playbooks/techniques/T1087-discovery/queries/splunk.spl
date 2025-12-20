@@ -1,0 +1,27 @@
+```
+# Account Discovery - Splunk SPL
+
+# Query 1: net user/group Enumeration
+index=windows (sourcetype="WinEventLog:Sysmon" EventCode=1 OR sourcetype="WinEventLog:Security" EventCode=4688)
+  (CommandLine="*net user*" OR CommandLine="*net localgroup*" OR CommandLine="*net group*\"domain admins\"*"
+   OR CommandLine="*net group*\"enterprise admins\"*")
+| stats count, values(CommandLine) by User, ComputerName
+
+# Query 2: LDAP Queries
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=1
+  (CommandLine="*dsquery*" OR CommandLine="*adfind*" OR CommandLine="*ldapsearch*")
+| stats count, values(CommandLine) by User, ComputerName
+
+# Query 3: PowerView Usage
+index=windows sourcetype="WinEventLog:Microsoft-Windows-PowerShell/Operational" EventCode=4104
+  (ScriptBlockText="*Get-NetUser*" OR ScriptBlockText="*Get-NetGroup*"
+   OR ScriptBlockText="*Get-DomainUser*" OR ScriptBlockText="*Get-DomainGroup*"
+   OR ScriptBlockText="*Invoke-UserHunter*")
+| stats count by User, ComputerName
+
+# Query 4: BloodHound Data Collection
+index=windows (sourcetype="WinEventLog:Sysmon" EventCode=1)
+  (Image="*\\SharpHound.exe" OR CommandLine="*Invoke-BloodHound*"
+   OR CommandLine="*bloodhound*" OR CommandLine="*sharphound*")
+| stats count, values(CommandLine) by User, ComputerName
+```

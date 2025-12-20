@@ -1,0 +1,198 @@
+```
+# Ransomware Detection - Splunk SPL Queries
+# Detects file encryption, shadow copy deletion, and ransomware behavior
+
+# Query 1: Rapid File Encryption Pattern
+# Detects mass file modifications/renames in short time
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=11
+| bin _time span=1m
+| stats
+    dc(TargetFilename) as unique_files,
+    values(TargetFilename) as sample_files,
+    values(Image) as processes
+  by _time, ComputerName, User
+| where unique_files > 50
+| eval files_per_minute=unique_files
+| stats
+    count as intervals,
+    sum(files_per_minute) as total_files,
+    avg(files_per_minute) as avg_files_per_min,
+    max(files_per_minute) as max_files_per_min,
+    values(processes) as all_processes
+  by ComputerName, User
+| where total_files > 500 OR max_files_per_min > 100
+| eval risk_score=case(
+    max_files_per_min > 200, 95,
+    total_files > 2000, 90,
+    max_files_per_min > 100, 85,
+    1=1, 70
+  )
+| sort - risk_score, - total_files
+| table ComputerName, User, total_files, max_files_per_min, avg_files_per_min, intervals, risk_score, all_processes
+
+# Query 2: Shadow Copy Deletion (Classic Ransomware Behavior)
+# Detects vssadmin, wbadmin commands to delete shadow copies
+index=windows (sourcetype="WinEventLog:Security" EventCode=4688 OR sourcetype="WinEventLog:Sysmon" EventCode=1)
+  (CommandLine="*vssadmin*delete*shadows*"
+   OR CommandLine="*wbadmin*delete*catalog*"
+   OR CommandLine="*wbadmin*delete*backup*"
+   OR CommandLine="*bcdedit*set*recoveryenabled*no*"
+   OR CommandLine="*wmic*shadowcopy*delete*"
+   OR CommandLine="*vssadmin*resize*shadowstorage*/maxsize*")
+| eval deletion_method=case(
+    match(CommandLine, "(?i)vssadmin.*delete"), "VSSAdmin Delete",
+    match(CommandLine, "(?i)wbadmin.*delete"), "WBAdmin Delete",
+    match(CommandLine, "(?i)bcdedit.*recoveryenabled"), "BCD Edit",
+    match(CommandLine, "(?i)wmic.*shadowcopy"), "WMIC ShadowCopy",
+    match(CommandLine, "(?i)vssadmin.*resize"), "VSS Resize",
+    1=1, "Other"
+  )
+| stats
+    count as deletion_commands,
+    values(CommandLine) as commands,
+    dc(ComputerName) as affected_hosts,
+    earliest(_time) as first_seen,
+    latest(_time) as last_seen
+  by User, deletion_method
+| eval time_span_minutes=round((last_seen-first_seen)/60, 2)
+| sort - deletion_commands
+| table User, deletion_method, deletion_commands, affected_hosts, time_span_minutes, commands
+| convert ctime(first_seen) ctime(last_seen)
+
+# Query 3: Ransomware Note Creation
+# Detects creation of typical ransom note files
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=11
+  (TargetFilename="*README.txt" OR TargetFilename="*HOW_TO_DECRYPT*"
+   OR TargetFilename="*DECRYPT_INSTRUCTIONS*" OR TargetFilename="*RESTORE_FILES*"
+   OR TargetFilename="*YOUR_FILES_ARE_ENCRYPTED*" OR TargetFilename="*HELP_DECRYPT*"
+   OR TargetFilename="*_RECOVER_*" OR TargetFilename="*_HOW_TO_RESTORE*")
+| rex field=TargetFilename "(?<filename>[^\\\\]+)$"
+| stats
+    count as note_count,
+    dc(TargetFilename) as unique_locations,
+    values(TargetFilename) as note_locations,
+    values(Image) as creating_processes,
+    dc(ComputerName) as affected_systems
+  by User, filename
+| where note_count > 5 OR unique_locations > 3
+| sort - note_count, - unique_locations
+| table User, filename, note_count, unique_locations, affected_systems, creating_processes, note_locations
+
+# Query 4: Suspicious File Extension Changes
+# Detects mass file renaming to encrypted extensions
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=11
+| rex field=TargetFilename "\.(?<extension>[^\.]+)$"
+| eval extension=lower(extension)
+| eval is_suspicious_ext=if(match(extension, "(?i)(locked|encrypted|crypto|cerber|locky|wannacry|ryuk|maze|sodinokibi|revil|conti|lockbit|blackcat)"), "Yes", "No")
+| where is_suspicious_ext="Yes"
+| bin _time span=5m
+| stats
+    count as files_encrypted,
+    dc(extension) as unique_extensions,
+    values(extension) as extensions,
+    values(Image) as encryption_processes
+  by _time, ComputerName, User
+| where files_encrypted > 20
+| stats
+    sum(files_encrypted) as total_encrypted,
+    values(unique_extensions) as all_extensions,
+    values(encryption_processes) as processes
+  by ComputerName, User
+| sort - total_encrypted
+| table ComputerName, User, total_encrypted, all_extensions, processes
+
+# Query 5: High File Deletion Activity
+# Detects mass file deletions (ransomware may delete originals)
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=23
+| bin _time span=1m
+| stats
+    count as deletions_per_minute,
+    values(TargetFilename) as sample_deleted_files,
+    values(Image) as deleting_processes
+  by _time, ComputerName, User
+| where deletions_per_minute > 30
+| stats
+    count as high_deletion_intervals,
+    sum(deletions_per_minute) as total_deletions,
+    max(deletions_per_minute) as max_deletions_per_min,
+    values(deleting_processes) as all_processes
+  by ComputerName, User
+| where total_deletions > 200
+| sort - total_deletions
+| table ComputerName, User, total_deletions, max_deletions_per_min, high_deletion_intervals, all_processes
+
+# Query 6: Known Ransomware Process Names
+# Detects known ransomware executables
+index=windows (sourcetype="WinEventLog:Sysmon" EventCode=1 OR sourcetype="WinEventLog:Security" EventCode=4688)
+  (Image="*\\cerber*" OR Image="*\\locky*" OR Image="*\\wannacry*"
+   OR Image="*\\petya*" OR Image="*\\ryuk*" OR Image="*\\maze*"
+   OR Image="*\\sodinokibi*" OR Image="*\\revil*" OR Image="*\\darkside*"
+   OR Image="*\\conti*" OR Image="*\\lockbit*" OR Image="*\\blackcat*"
+   OR Image="*\\blackmatter*" OR Image="*\\hive*" OR Image="*\\alphv*"
+   OR CommandLine="*-encryption*" OR CommandLine="*-encrypted*")
+| eval ransomware_family=case(
+    match(Image, "(?i)cerber"), "Cerber",
+    match(Image, "(?i)locky"), "Locky",
+    match(Image, "(?i)wannacry"), "WannaCry",
+    match(Image, "(?i)petya"), "Petya/NotPetya",
+    match(Image, "(?i)ryuk"), "Ryuk",
+    match(Image, "(?i)maze"), "Maze",
+    match(Image, "(?i)sodinokibi|revil"), "REvil/Sodinokibi",
+    match(Image, "(?i)darkside"), "DarkSide",
+    match(Image, "(?i)conti"), "Conti",
+    match(Image, "(?i)lockbit"), "LockBit",
+    match(Image, "(?i)blackcat|alphv"), "BlackCat/ALPHV",
+    match(Image, "(?i)blackmatter"), "BlackMatter",
+    match(Image, "(?i)hive"), "Hive",
+    1=1, "Unknown/Generic"
+  )
+| stats
+    count as executions,
+    values(CommandLine) as command_lines,
+    values(ParentImage) as parent_processes,
+    dc(ComputerName) as infected_systems
+  by ransomware_family, User
+| sort - infected_systems, - executions
+| table ransomware_family, User, executions, infected_systems, parent_processes, command_lines
+
+# Query 7: Volume/Drive Encryption Activity
+# Detects cipher.exe or BitLocker abuse
+index=windows (sourcetype="WinEventLog:Sysmon" EventCode=1 OR sourcetype="WinEventLog:Security" EventCode=4688)
+  (Image="*\\cipher.exe" CommandLine="*/w*"
+   OR Image="*\\manage-bde.exe" (CommandLine="*-on*" OR CommandLine="*-protectors*-add*")
+   OR CommandLine="*diskshadow*" OR CommandLine="*diskpart*")
+| eval encryption_tool=case(
+    match(Image, "cipher"), "Cipher.exe",
+    match(Image, "manage-bde"), "BitLocker",
+    match(CommandLine, "diskshadow"), "DiskShadow",
+    match(CommandLine, "diskpart"), "DiskPart",
+    1=1, "Other"
+  )
+| stats
+    count as tool_executions,
+    values(CommandLine) as commands,
+    dc(ComputerName) as systems
+  by User, encryption_tool
+| sort - tool_executions
+| table User, encryption_tool, tool_executions, systems, commands
+
+# Query 8: Network Share Encryption
+# Detects encryption of network shares
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=11
+| rex field=TargetFilename "^\\\\\\\\(?<share_host>[^\\\\]+)\\\\(?<share_name>[^\\\\]+)"
+| where isnotnull(share_host)
+| bin _time span=2m
+| stats
+    count as files_modified_on_share,
+    dc(TargetFilename) as unique_files,
+    values(share_name) as shares
+  by _time, share_host, User, ComputerName
+| where files_modified_on_share > 30
+| stats
+    sum(files_modified_on_share) as total_share_modifications,
+    values(shares) as affected_shares
+  by share_host, User, ComputerName
+| where total_share_modifications > 100
+| sort - total_share_modifications
+| table share_host, User, ComputerName, total_share_modifications, affected_shares
+```

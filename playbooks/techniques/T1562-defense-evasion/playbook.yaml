@@ -1,0 +1,49 @@
+id: PB-T1562-001
+name: "Impair Defenses - Security Tool Tampering"
+description: "Detect attempts to disable antivirus, EDR, logging, and other security mechanisms"
+
+mitre:
+  technique: T1562
+  tactic: defense-evasion
+  subtechniques: [T1562.001, T1562.002, T1562.004]
+
+severity: critical
+author: Threat Hunting Team
+created: 2025-12-20
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Event Logs (Event ID 1102, 4719)
+  - Sysmon (Event IDs 1, 12, 13)
+  - Windows Defender Logs
+  - Firewall Logs
+
+hunt_hypothesis: |
+  Adversaries disable security controls to avoid detection. This playbook hunts for:
+
+  1. Antivirus/EDR tampering or uninstallation
+  2. Windows Defender disabling
+  3. Firewall rule modifications or disabling
+  4. Event log clearing
+  5. Security service termination
+  6. Audit policy changes
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify what security tool was disabled
+  - Determine user/process responsible
+  - Check for malware execution after tampering
+  - Restore security tools immediately
+  - Review logs before clearing/tampering
+  - Search for additional defense evasion attempts
+
+false_positives:
+  - Legitimate system updates
+  - IT administration
+  - Software uninstallations
+
+tags: [defense-evasion, security-tampering, av-disable, log-clearing]

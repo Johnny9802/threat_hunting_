@@ -1,0 +1,57 @@
+// Boot and Logon Persistence Detection - Elastic KQL Queries
+
+// Query 1: Registry Run Keys Modification
+event.category: "registry" AND (
+  registry.path: (*\\CurrentVersion\\Run* OR *\\CurrentVersion\\RunOnce* OR
+    *\\Winlogon\\* OR *\\Explorer\\Shell* OR *\\Policies\\Explorer\\Run*)
+)
+
+// Query 2: Startup Folder File Creation
+event.category: "file" AND event.type: "creation" AND
+file.path: (*\\Start Menu\\Programs\\Startup\\* OR
+  *\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*)
+
+// Query 3: Scheduled Task Creation
+event.code: (4698 OR 4702) AND event.category: "scheduler"
+
+// Query 4: Scheduled Task with Suspicious Command
+event.code: 4698 AND (
+  winlog.event_data.TaskContent: (*powershell* OR *wscript* OR *cmd* OR
+    *regsvr32* OR *rundll32* OR *mshta*)
+)
+
+// Query 5: WMI Event Subscription
+event.category: "process" AND event.code: (19 OR 20 OR 21) AND
+event.provider: "Microsoft-Windows-Sysmon"
+
+// Query 6: New Service Creation
+event.code: 7045 AND event.category: "service"
+
+// Query 7: Service from Suspicious Location
+event.code: 7045 AND winlog.event_data.ImagePath: (
+  *\\Temp\\* OR *\\AppData\\* OR *\\Public\\* OR *\\ProgramData\\*
+)
+
+// Query 8: Winlogon Helper DLL
+event.category: "registry" AND registry.path: (
+  *\\Winlogon\\Notify* OR *\\Winlogon\\Userinit* OR
+  *\\Winlogon\\Shell* OR *\\Image File Execution Options\\*
+)
+
+// Query 9: AppInit DLLs
+event.category: "registry" AND registry.path: (
+  *\\AppInit_DLLs* OR *\\AppCertDlls*
+)
+
+// Query 10: Screensaver Persistence
+event.category: "registry" AND registry.path: *\\Control Panel\\Desktop\\SCRNSAVE.EXE*
+
+// Query 11: Time Provider DLL
+event.category: "registry" AND registry.path: *\\TimeProviders\\*
+
+// Query 12: Accessibility Features Backdoor
+event.category: "registry" AND registry.path: (
+  *\\Image File Execution Options\\sethc.exe* OR
+  *\\Image File Execution Options\\utilman.exe* OR
+  *\\Image File Execution Options\\osk.exe*
+)

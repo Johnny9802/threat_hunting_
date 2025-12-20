@@ -1,0 +1,21 @@
+// Defense Evasion - Elastic KQL
+
+// Windows Defender Disabling
+event.category: "process" AND process.command_line: (
+  *Set-MpPreference*DisableRealtimeMonitoring* OR *Set-MpPreference*DisableBehaviorMonitoring* OR
+  *Add-MpPreference*ExclusionPath* OR *sc*stop*WinDefend*)
+
+// Event Log Clearing
+event.code: 1102
+
+// Firewall Disabling
+event.category: "process" AND process.command_line: (
+  *netsh*firewall*set*off* OR *Set-NetFirewallProfile*Enabled*False*)
+
+// Security Process Termination
+event.category: "process" AND process.name: taskkill.exe AND
+process.command_line: (*MsMpEng* OR *Defender* OR *CrowdStrike* OR *CarbonBlack*)
+
+// Security Registry Tampering
+event.category: "registry" AND registry.path: (
+  *Windows?Defender*DisableAntiSpyware* OR *DisableRealtimeMonitoring*)

@@ -1,0 +1,38 @@
+```
+# Defense Evasion - Security Tool Tampering - Splunk SPL
+
+# Query 1: Windows Defender Disabling
+index=windows (sourcetype="WinEventLog:Sysmon" EventCode=1 OR sourcetype="WinEventLog:Security" EventCode=4688)
+  (CommandLine="*Set-MpPreference*-DisableRealtimeMonitoring*true*"
+   OR CommandLine="*Set-MpPreference*-DisableBehaviorMonitoring*true*"
+   OR CommandLine="*Set-MpPreference*-DisableIOAVProtection*true*"
+   OR CommandLine="*Add-MpPreference*-ExclusionPath*"
+   OR CommandLine="*sc*stop*WinDefend*"
+   OR CommandLine="*sc*delete*WinDefend*")
+| stats count, values(CommandLine) as commands by User, ComputerName
+
+# Query 2: Event Log Clearing
+index=windows sourcetype="WinEventLog:Security" EventCode=1102
+| stats count by User, ComputerName, Channel
+
+# Query 3: Firewall Modification
+index=windows (sourcetype="WinEventLog:Sysmon" EventCode=1)
+  (CommandLine="*netsh*firewall*"
+   OR CommandLine="*Set-NetFirewallProfile*-Enabled*False*"
+   OR CommandLine="*netsh*advfirewall*set*off*")
+| stats count, values(CommandLine) by User, ComputerName
+
+# Query 4: Security Service Termination
+index=windows sourcetype="WinEventLog:Sysmon" EventCode=1
+  Image="*\\taskkill.exe"
+  (CommandLine="*MsMpEng*" OR CommandLine="*SenseIR*" OR CommandLine="*CrowdStrike*"
+   OR CommandLine="*CarbonBlack*" OR CommandLine="*Defender*" OR CommandLine="*Antivirus*")
+| stats count, values(CommandLine) by User, ComputerName
+
+# Query 5: Registry Tampering - Disable Security Features
+index=windows sourcetype="WinEventLog:Sysmon" (EventCode=12 OR EventCode=13)
+  (TargetObject="*\\Windows Defender\\*DisableAntiSpyware*"
+   OR TargetObject="*\\Windows Defender\\*DisableRealtimeMonitoring*"
+   OR TargetObject="*\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\\NoAutoUpdate*")
+| stats count, values(Details) by User, TargetObject, ComputerName
+```

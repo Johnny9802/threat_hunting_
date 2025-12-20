@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added v1.1 (In Progress)
+## [1.1.0] - 2025-12-20
+
+### Added
 - GitHub Actions CI/CD pipeline
   - Automated testing on push/PR
   - Multi-OS testing (Ubuntu, macOS, Windows)
@@ -17,18 +19,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Security scanning (Safety, Bandit)
   - Package building and PyPI upload support
 - Release automation workflow
-- New playbook: T1021 - Lateral Movement via Remote Services
-  - Complete Splunk SPL queries (7 queries)
-  - Elastic KQL queries (10 queries)
-  - Sigma rules (5 rules)
-  - Comprehensive detection for RDP, SMB, WinRM, PSExec, Pass-the-Hash
+- **5 New Playbooks:**
+  - **T1021** - Lateral Movement via Remote Services (7 SPL, 10 KQL, 5 Sigma)
+  - **T1547** - Boot/Logon Persistence (7 SPL, 12 KQL, 5 Sigma)
+  - **T1486** - Ransomware Detection (8 SPL, 10 KQL, 5 Sigma)
+  - **T1562** - Security Tool Tampering (5 SPL, 5 KQL, 2 Sigma)
+  - **T1087** - Account Discovery (4 SPL, 4 KQL, 2 Sigma)
 
-### Planned for v1.1
-- [ ] 4 additional playbooks (T1547, T1562, T1087, T1486)
-- [ ] Query validation framework
-- [ ] Enhanced export (JSON/CSV/templates)
-- [ ] Performance benchmarking
-- [ ] Updated documentation
+### Changed
+- Updated README with all 8 playbooks
+- Added CHANGELOG.md for version tracking
+- Added TODO.md for development roadmap
+
+### Total Coverage (v1.1)
+- **8 complete playbooks** covering MITRE ATT&CK tactics:
+  - Initial Access (T1566 - Phishing)
+  - Execution (T1059 - Command Execution)
+  - Persistence (T1547 - Autostart)
+  - Credential Access (T1003 - Credential Dumping)
+  - Discovery (T1087 - Account Discovery)
+  - Lateral Movement (T1021 - Remote Services)
+  - Defense Evasion (T1562 - Impair Defenses)
+  - Impact (T1486 - Ransomware)
+- **150+ detection queries** (31 SPL, 63 KQL, 26 Sigma)
+- **CI/CD pipeline** for automated quality assurance
 
 ## [1.0.0] - 2025-12-20
 
@@ -58,5 +72,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hunt ai suggest` - Get investigation suggestions
 - `hunt ai generate` - Generate query variants
 
-[Unreleased]: https://github.com/Johnny9802/threat_hunting_/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Johnny9802/threat_hunting_/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Johnny9802/threat_hunting_/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Johnny9802/threat_hunting_/releases/tag/v1.0.0

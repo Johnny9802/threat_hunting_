@@ -1,0 +1,17 @@
+// Account Discovery - Elastic KQL
+
+// net user Enumeration
+event.category: "process" AND process.command_line: (
+  *net*user* OR *net*localgroup* OR *net*group*)
+
+// LDAP Query Tools
+event.category: "process" AND process.name: (
+  dsquery.exe OR adfind.exe OR ldapsearch.exe)
+
+// PowerView Commands
+event.category: "process" AND process.command_line: (
+  *Get-NetUser* OR *Get-DomainUser* OR *Get-NetGroup* OR *Invoke-UserHunter*)
+
+// BloodHound
+event.category: "process" AND (
+  process.name: SharpHound.exe OR process.command_line: *Invoke-BloodHound*)

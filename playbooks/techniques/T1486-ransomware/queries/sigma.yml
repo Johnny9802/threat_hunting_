@@ -1,0 +1,158 @@
+title: Shadow Copy Deletion
+id: a1b2c3d4-1486-4001-8a9b-0c1d2e3f4a5b
+status: production
+description: Detects shadow copy deletion commonly used by ransomware
+author: Threat Hunting Team
+date: 2025/12/20
+references:
+  - https://attack.mitre.org/techniques/T1490/
+  - https://attack.mitre.org/techniques/T1486/
+tags:
+  - attack.impact
+  - attack.t1486
+  - attack.defense_evasion
+  - attack.t1490
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_vssadmin:
+    Image|endswith: '\vssadmin.exe'
+    CommandLine|contains: 'delete shadows'
+  selection_wbadmin:
+    Image|endswith: '\wbadmin.exe'
+    CommandLine|contains:
+      - 'delete catalog'
+      - 'delete backup'
+  selection_wmic:
+    Image|endswith: '\wmic.exe'
+    CommandLine|contains: 'shadowcopy delete'
+  selection_bcdedit:
+    Image|endswith: '\bcdedit.exe'
+    CommandLine|contains:
+      - 'recoveryenabled no'
+      - 'bootstatuspolicy ignoreallfailures'
+  condition: 1 of selection_*
+falsepositives:
+  - Legitimate system maintenance
+  - Backup software
+level: critical
+---
+title: Ransomware Note Creation
+id: b2c3d4e5-1486-4002-9b0c-1d2e3f4a5b6c
+status: production
+description: Detects creation of typical ransomware note files
+author: Threat Hunting Team
+date: 2025/12/20
+references:
+  - https://attack.mitre.org/techniques/T1486/
+tags:
+  - attack.impact
+  - attack.t1486
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|contains:
+      - 'README'
+      - 'HOW_TO_DECRYPT'
+      - 'DECRYPT_INSTRUCTIONS'
+      - 'RESTORE_FILES'
+      - 'YOUR_FILES_ARE_ENCRYPTED'
+      - 'HELP_DECRYPT'
+      - '_RECOVER_'
+    TargetFilename|endswith:
+      - '.txt'
+      - '.html'
+      - '.hta'
+  condition: selection
+falsepositives:
+  - Legitimate README files
+level: high
+---
+title: Known Ransomware Process Execution
+id: c3d4e5f6-1486-4003-0c1d-2e3f4a5b6c7d
+status: production
+description: Detects execution of known ransomware families
+author: Threat Hunting Team
+date: 2025/12/20
+references:
+  - https://attack.mitre.org/techniques/T1486/
+tags:
+  - attack.impact
+  - attack.t1486
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|contains:
+      - '\cerber'
+      - '\locky'
+      - '\wannacry'
+      - '\petya'
+      - '\ryuk'
+      - '\maze'
+      - '\sodinokibi'
+      - '\revil'
+      - '\darkside'
+      - '\conti'
+      - '\lockbit'
+      - '\blackcat'
+      - '\blackmatter'
+      - '\hive'
+      - '\alphv'
+  condition: selection
+falsepositives:
+  - Very unlikely
+level: critical
+---
+title: Mass File Encryption Activity
+id: d4e5f6a7-1486-4004-1d2e-3f4a5b6c7d8e
+status: production
+description: Detects rapid file modifications indicating encryption
+author: Threat Hunting Team
+date: 2025/12/20
+references:
+  - https://attack.mitre.org/techniques/T1486/
+tags:
+  - attack.impact
+  - attack.t1486
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    EventID: 11
+  timeframe: 1m
+  condition: selection | count() by ComputerName > 50
+falsepositives:
+  - Large file operations
+  - Software installations
+  - Backup operations
+level: high
+---
+title: Cipher.exe Data Wiping
+id: e5f6a7b8-1486-4005-2e3f-4a5b6c7d8e9f
+status: production
+description: Detects cipher.exe used to wipe free space
+author: Threat Hunting Team
+date: 2025/12/20
+references:
+  - https://attack.mitre.org/techniques/T1070/004/
+tags:
+  - attack.defense_evasion
+  - attack.t1070.004
+  - attack.impact
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: '\cipher.exe'
+    CommandLine|contains: '/w'
+  condition: selection
+falsepositives:
+  - Legitimate data sanitization
+level: medium

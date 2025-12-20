@@ -1,0 +1,49 @@
+// Ransomware Detection - Elastic KQL Queries
+
+// Query 1: Rapid File Creation/Modification
+event.category: "file" AND event.type: (creation OR change)
+| stats count() by host.name, user.name, process.name
+| where count > 100
+
+// Query 2: Shadow Copy Deletion
+event.category: "process" AND event.type: "start" AND (
+  process.command_line: (*vssadmin*delete*shadows* OR *wbadmin*delete* OR
+    *bcdedit*recoveryenabled*no* OR *wmic*shadowcopy*delete*)
+)
+
+// Query 3: Ransomware Note Creation
+event.category: "file" AND event.type: "creation" AND
+file.name: (*README* OR *HOW_TO_DECRYPT* OR *DECRYPT_INSTRUCTIONS* OR
+  *RESTORE_FILES* OR *ENCRYPTED* OR *HELP_DECRYPT* OR *_RECOVER_*)
+
+// Query 4: Suspicious File Extension
+event.category: "file" AND file.extension: (
+  locked OR encrypted OR crypto OR cerber OR locky OR wannacry OR
+  ryuk OR maze OR sodinokibi OR revil OR conti OR lockbit OR blackcat
+)
+
+// Query 5: Mass File Deletion
+event.category: "file" AND event.type: "deletion"
+| stats count() by host.name, user.name
+| where count > 50
+
+// Query 6: Known Ransomware Processes
+event.category: "process" AND event.type: "start" AND
+process.name: (cerber* OR locky* OR wannacry* OR petya* OR ryuk* OR
+  maze* OR sodinokibi* OR revil* OR darkside* OR conti* OR lockbit* OR blackcat*)
+
+// Query 7: Cipher.exe Wiping
+event.category: "process" AND event.type: "start" AND
+process.name: cipher.exe AND process.command_line: */w*
+
+// Query 8: BitLocker Abuse
+event.category: "process" AND event.type: "start" AND
+process.name: manage-bde.exe AND process.command_line: (*-on* OR *-protectors*add*)
+
+// Query 9: High Entropy Files (Encrypted)
+file.entropy: >= 7.5
+
+// Query 10: Network Share File Encryption
+event.category: "file" AND file.path: \\\\*
+| stats count() by source.ip, file.path
+| where count > 50

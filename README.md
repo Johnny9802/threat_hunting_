@@ -33,10 +33,15 @@ The Threat Hunting Playbook is a production-ready CLI tool designed for security
 - **Investigation Suggestions**: Get next steps when you find suspicious activity
 - **Generate Variants**: Adapt playbooks to different environments (Azure AD, Linux, etc.)
 
-### Included Playbooks
+### Included Playbooks (8 Complete)
 1. **PB-T1566-001**: Phishing Email Detection (T1566 - Initial Access)
 2. **PB-T1059-001**: Malicious Command Execution (T1059 - Execution)
 3. **PB-T1003-001**: OS Credential Dumping (T1003 - Credential Access)
+4. **PB-T1021-001**: Lateral Movement via Remote Services (T1021 - Lateral Movement)
+5. **PB-T1547-001**: Boot/Logon Persistence (T1547 - Persistence)
+6. **PB-T1486-001**: Ransomware Detection (T1486 - Impact)
+7. **PB-T1562-001**: Security Tool Tampering (T1562 - Defense Evasion)
+8. **PB-T1087-001**: Account Discovery (T1087 - Discovery)
 
 Each playbook includes:
 - Complete YAML metadata with MITRE mapping
