@@ -1,0 +1,49 @@
+id: PB-T1547-001
+name: "Boot and Logon Autostart Persistence"
+description: "Detect persistence mechanisms via registry run keys, startup folders, and scheduled tasks"
+
+mitre:
+  technique: T1547
+  tactic: persistence
+  subtechniques: [T1547.001, T1547.009, T1547.012]
+
+severity: high
+author: Threat Hunting Team
+created: 2025-12-20
+updated: 2025-12-20
+
+data_sources:
+  - Windows Registry Logs
+  - Sysmon (Event IDs 12, 13, 14)
+  - Windows Security Logs (Event ID 4698, 4699, 4700, 4701)
+  - File System Monitoring
+
+hunt_hypothesis: |
+  Adversaries establish persistence by modifying autostart locations to execute
+  malicious code at system boot or user logon. This playbook hunts for:
+
+  1. Suspicious registry run keys (HKCU/HKLM\Software\Microsoft\Windows\CurrentVersion\Run)
+  2. Startup folder modifications
+  3. Scheduled tasks created or modified
+  4. WMI event subscriptions
+  5. Service creation pointing to unusual locations
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Verify legitimacy of the persistence mechanism
+  - Check the executable/script being launched
+  - Review file hash and digital signature
+  - Identify when the persistence was created
+  - Search for related malicious activity
+  - Check for additional persistence mechanisms
+
+false_positives:
+  - Legitimate software installations
+  - System updates
+  - User-installed applications
+
+tags: [persistence, registry, startup, scheduled-tasks, autostart]

@@ -1,0 +1,50 @@
+// Lateral Movement Detection - Elastic KQL Queries
+
+// Query 1: Suspicious RDP Connections
+event.code: 4624 AND winlog.event_data.LogonType: 10 AND
+source.ip: * AND NOT source.ip: (127.0.0.1 OR ::1)
+| stats count(), dc(host.name) by user.name, source.ip
+| where count > 5 OR dc_host_name > 3
+
+// Query 2: Admin Share Access
+event.code: (5140 OR 5145) AND
+file.share: (*\\C$ OR *\\ADMIN$ OR *\\IPC$)
+| stats count(), dc(destination.address) by user.name, file.share
+| where count > 5
+
+// Query 3: WinRM Activity
+event.provider: "Microsoft-Windows-WinRM" AND event.code: (6 OR 15 OR 33)
+
+// Query 4: PSExec Execution
+event.category: "process" AND event.type: "start" AND (
+  process.name: (psexec.exe OR paexec.exe OR psexec64.exe) OR
+  process.parent.name: psexesvc.exe
+)
+
+// Query 5: Pass-the-Hash (NTLM with Zero Key Length)
+event.code: 4624 AND winlog.event_data.LogonType: 3 AND
+winlog.event_data.AuthenticationPackageName: NTLM AND
+winlog.event_data.KeyLength: 0
+
+// Query 6: PowerShell Remoting
+event.category: "process" AND event.type: "start" AND
+process.name: (powershell.exe OR pwsh.exe) AND
+process.command_line: (*-ComputerName* OR *Invoke-Command* OR *Enter-PSSession*)
+
+// Query 7: Explicit Credential Usage (RunAs)
+event.code: 4648 AND
+user.name: * AND winlog.event_data.TargetUserName: *
+| where user.name != winlog.event_data.TargetUserName
+
+// Query 8: Lateral Movement via Service Creation
+event.code: 7045 AND winlog.event_data.ServiceName: *
+| stats count() by winlog.event_data.ServiceName, winlog.event_data.ImagePath
+
+// Query 9: Remote Scheduled Task Creation
+event.code: 4698 AND winlog.event_data.TaskName: *
+| stats count(), dc(host.name) by user.name
+
+// Query 10: Network Logon Spike
+event.code: 4624 AND winlog.event_data.LogonType: 3
+| stats count() by host.name, user.name
+| where count > 50

@@ -1,0 +1,79 @@
+id: PB-T1021-001
+name: "Lateral Movement via Remote Services"
+description: "Detect lateral movement through RDP, SMB, WinRM, PSExec, and other remote service abuse"
+
+mitre:
+  technique: T1021
+  tactic: lateral-movement
+  subtechniques: [T1021.001, T1021.002, T1021.003, T1021.006]
+
+severity: high
+author: Threat Hunting Team
+created: 2025-12-20
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Event Logs (Event ID 4624, 4625, 4648, 4672)
+  - Network Traffic Logs
+  - Sysmon (Event IDs 1, 3, 17, 18)
+  - Authentication Logs
+
+hunt_hypothesis: |
+  Adversaries move laterally through networks using legitimate remote administration
+  tools and protocols. This playbook hunts for:
+
+  1. Suspicious RDP connections (unusual times, rare source/destination pairs)
+  2. SMB/Admin$ share access for lateral movement
+  3. WinRM/PowerShell remoting abuse
+  4. PSExec and similar remote execution tools
+  5. Pass-the-Hash authentication patterns
+  6. Privileged account usage across multiple systems
+
+  We focus on anomalous patterns: admin accounts connecting to workstations,
+  lateral movement from non-IT systems, connections during off-hours, and
+  rapid successive connections across multiple hosts.
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify the source and destination systems involved
+  - Verify if the account typically accesses the destination system
+  - Check for privilege escalation after initial access
+  - Review authentication logs for Pass-the-Hash indicators (NTLM usage)
+  - Search for additional lateral movement attempts from same source
+  - Analyze process execution on destination systems
+  - Check for data exfiltration or credential dumping post-movement
+  - Review network traffic for C2 communications
+
+false_positives:
+  - IT administrators performing legitimate remote maintenance
+  - Automated system management tools (SCCM, Ansible, SolarWinds)
+  - Help desk remote support sessions
+  - Scheduled tasks running with service accounts
+  - Backup systems accessing multiple hosts
+  - Monitoring and security tools
+
+iocs:
+  - type: file
+    value: "psexec.exe"
+    context: "Remote execution tool commonly used for lateral movement"
+  - type: file
+    value: "paexec.exe"
+    context: "PSExec alternative"
+  - type: registry
+    value: "HKLM\\SYSTEM\\CurrentControlSet\\Services\\PSEXESVC"
+    context: "PSExec service registry key"
+  - type: domain
+    value: "WORKGROUP"
+    context: "Non-domain authentication may indicate Pass-the-Hash"
+
+references:
+  - https://attack.mitre.org/techniques/T1021/
+  - https://www.microsoft.com/security/blog/2023/05/24/volt-typhoon-targets-us-critical-infrastructure-with-living-off-the-land-techniques/
+  - https://www.elastic.co/security-labs/detecting-lateral-movement-via-windows-event-logs
+  - https://github.com/SigmaHQ/sigma/tree/master/rules/windows/builtin/security
+
+tags: [lateral-movement, rdp, smb, winrm, psexec, pass-the-hash, remote-services]

@@ -1,0 +1,164 @@
+```
+# Lateral Movement Detection - Splunk SPL Queries
+# Detects RDP, SMB, WinRM, and PSExec lateral movement
+
+# Query 1: Suspicious RDP Logons
+# Detects RDP connections (logon type 10) with suspicious patterns
+index=windows sourcetype="WinEventLog:Security" EventCode=4624 Logon_Type=10
+| eval src_ip=if(isnotnull(Source_Network_Address) AND Source_Network_Address!="-" AND Source_Network_Address!="::1" AND Source_Network_Address!="127.0.0.1", Source_Network_Address, "local")
+| where src_ip!="local"
+| eval is_admin=if(match(Account_Name, "(?i)(admin|svc|service)"), "Yes", "No")
+| eval dest_is_workstation=if(match(ComputerName, "(?i)(WS|DESKTOP|PC|LAPTOP)"), "Yes", "No")
+| eval hour=strftime(_time, "%H")
+| eval is_offhours=if(hour < 7 OR hour > 19, "Yes", "No")
+| stats
+    count as rdp_count,
+    dc(ComputerName) as unique_destinations,
+    values(ComputerName) as destinations,
+    values(src_ip) as source_ips,
+    earliest(_time) as first_seen,
+    latest(_time) as last_seen
+  by Account_Name, is_admin, dest_is_workstation, is_offhours
+| eval time_span_minutes=round((last_seen-first_seen)/60, 2)
+| where (unique_destinations > 3 AND time_span_minutes < 60) OR (is_admin="Yes" AND dest_is_workstation="Yes") OR (rdp_count > 10 AND is_offhours="Yes")
+| eval risk_score=case(
+    unique_destinations > 5 AND time_span_minutes < 30, 90,
+    is_admin="Yes" AND dest_is_workstation="Yes", 80,
+    is_offhours="Yes" AND rdp_count > 5, 70,
+    1=1, 50
+  )
+| sort - risk_score, - unique_destinations
+| table Account_Name, is_admin, rdp_count, unique_destinations, time_span_minutes, is_offhours, risk_score, destinations, source_ips
+| convert ctime(first_seen) ctime(last_seen)
+
+# Query 2: SMB Admin Share Access (Lateral Movement)
+# Detects access to admin shares (C$, ADMIN$, IPC$) commonly used for lateral movement
+index=windows sourcetype="WinEventLog:Security" (EventCode=5140 OR EventCode=5145)
+  (Share_Name="\\\\*\\C$" OR Share_Name="\\\\*\\ADMIN$" OR Share_Name="\\\\*\\IPC$")
+| rex field=Share_Name "\\\\\\\\(?<target_host>[^\\\\]+)\\\\"
+| eval share_type=case(
+    match(Share_Name, "C\\$"), "C$ (System Drive)",
+    match(Share_Name, "ADMIN\\$"), "ADMIN$ (Windows Dir)",
+    match(Share_Name, "IPC\\$"), "IPC$ (Named Pipes)",
+    1=1, "Other"
+  )
+| stats
+    count as access_count,
+    dc(target_host) as unique_targets,
+    values(target_host) as targets,
+    dc(Object_Name) as unique_files,
+    values(Object_Name) as accessed_files
+  by Account_Name, ComputerName, share_type, Accesses
+| where access_count > 5 OR unique_targets > 2
+| eval risk_score=case(
+    unique_targets > 5, 90,
+    match(Accesses, "(?i)(WriteData|AppendData)"), 80,
+    unique_targets > 2, 70,
+    1=1, 50
+  )
+| sort - risk_score, - unique_targets
+| table Account_Name, ComputerName, share_type, access_count, unique_targets, unique_files, risk_score, targets, accessed_files
+
+# Query 3: WinRM / PowerShell Remoting
+# Detects Windows Remote Management activity
+index=windows sourcetype="WinEventLog:Microsoft-Windows-WinRM/Operational" (EventCode=6 OR EventCode=15 OR EventCode=33)
+| stats
+    count as winrm_connections,
+    values(User) as users,
+    dc(DestinationIP) as unique_destinations,
+    values(DestinationIP) as destinations
+  by ComputerName
+| where winrm_connections > 10 OR unique_destinations > 3
+| join type=left ComputerName
+  [search index=windows sourcetype="WinEventLog:Sysmon" EventCode=1
+    (Image="*\\powershell.exe" OR Image="*\\pwsh.exe")
+    CommandLine="*-ComputerName*" OR CommandLine="*Invoke-Command*" OR CommandLine="*Enter-PSSession*"
+   | stats count as ps_remote_count by ComputerName]
+| eval total_activity=winrm_connections + coalesce(ps_remote_count, 0)
+| where total_activity > 15
+| sort - total_activity
+| table ComputerName, winrm_connections, ps_remote_count, unique_destinations, users, destinations
+
+# Query 4: PSExec Detection
+# Detects PSExec usage for remote command execution
+index=windows (sourcetype="WinEventLog:Sysmon" EventCode=1 OR sourcetype="WinEventLog:Security" EventCode=4688)
+  (Image="*\\psexec.exe" OR Image="*\\paexec.exe" OR Image="*\\psexec64.exe"
+   OR OriginalFileName="psexec.c" OR ParentImage="*\\psexesvc.exe"
+   OR CommandLine="*\\\\*\\admin$*" OR CommandLine="*\\\\*\\c$*")
+| eval tool=case(
+    match(Image, "(?i)psexec"), "PSExec",
+    match(Image, "(?i)paexec"), "PAExec",
+    match(ParentImage, "(?i)psexesvc"), "PSExec Service",
+    1=1, "Unknown"
+  )
+| rex field=CommandLine "\\\\\\\\(?<target_system>[^\\\\]+)"
+| stats
+    count as exec_count,
+    values(target_system) as targets,
+    dc(target_system) as unique_targets,
+    values(CommandLine) as commands,
+    values(User) as users
+  by ComputerName, tool
+| where exec_count > 1 OR unique_targets > 1
+| sort - unique_targets, - exec_count
+| table ComputerName, tool, exec_count, unique_targets, users, targets, commands
+
+# Query 5: Pass-the-Hash Detection
+# Detects NTLM authentication patterns indicative of Pass-the-Hash attacks
+index=windows sourcetype="WinEventLog:Security" EventCode=4624
+  Logon_Type=3 Authentication_Package="NTLM"
+| where Key_Length=0 OR isnull(Key_Length)
+| eval is_local_admin=if(match(Account_Name, "(?i)(administrator|admin)"), "Yes", "No")
+| eval src_ip=if(isnotnull(Source_Network_Address) AND Source_Network_Address!="-", Source_Network_Address, "unknown")
+| stats
+    count as ntlm_logons,
+    dc(ComputerName) as unique_targets,
+    values(ComputerName) as target_systems,
+    dc(src_ip) as unique_sources,
+    values(src_ip) as source_ips,
+    earliest(_time) as first_seen,
+    latest(_time) as last_seen
+  by Account_Name, Logon_Type, is_local_admin
+| eval time_span_seconds=last_seen-first_seen
+| where (unique_targets > 3 AND time_span_seconds < 300) OR (is_local_admin="Yes" AND unique_targets > 2)
+| eval lateral_movement_velocity=round(unique_targets/(time_span_seconds/60), 2)
+| sort - unique_targets, - lateral_movement_velocity
+| table Account_Name, is_local_admin, ntlm_logons, unique_targets, lateral_movement_velocity, unique_sources, target_systems, source_ips
+| convert ctime(first_seen) ctime(last_seen)
+
+# Query 6: Rapid Lateral Movement (Beaconing Pattern)
+# Detects accounts rapidly accessing multiple systems
+index=windows sourcetype="WinEventLog:Security" EventCode=4624
+  (Logon_Type=3 OR Logon_Type=10)
+| bin _time span=5m
+| stats
+    dc(ComputerName) as systems_per_5min,
+    values(ComputerName) as systems
+  by _time, Account_Name, Logon_Type
+| where systems_per_5min >= 5
+| stats
+    count as intervals_with_activity,
+    sum(systems_per_5min) as total_systems,
+    avg(systems_per_5min) as avg_systems_per_interval,
+    values(systems) as all_systems
+  by Account_Name, Logon_Type
+| where intervals_with_activity > 3
+| sort - total_systems
+| table Account_Name, Logon_Type, intervals_with_activity, total_systems, avg_systems_per_interval, all_systems
+
+# Query 7: Explicit Credential Usage (RunAs)
+# Detects use of explicit credentials (Event 4648) often used in lateral movement
+index=windows sourcetype="WinEventLog:Security" EventCode=4648
+| eval target_creds=Target_User_Name."@".Target_Domain_Name
+| eval is_diff_account=if(Account_Name!=Target_User_Name, "Yes", "No")
+| where is_diff_account="Yes"
+| stats
+    count as runas_count,
+    dc(Target_Server_Name) as unique_targets,
+    values(Target_Server_Name) as target_servers,
+    values(Process_Name) as processes
+  by Account_Name, target_creds, ComputerName
+| where runas_count > 3 OR unique_targets > 2
+| sort - unique_targets, - runas_count
+| table Account_Name, target_creds, ComputerName, runas_count, unique_targets, target_servers, processes
+```
