@@ -1,0 +1,29 @@
+`comment("=== PB-T1071-001 - Web Protocols Command and Control Detection ===")`
+`comment("MITRE ATT&CK: T1071.001 - command-and-control")`
+
+`comment("HTTP Beaconing Detection")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler
+| bin _time span=1m
+| stats count by src_ip, dest_host, _time
+| eventstats stdev(count) as stdev_count avg(count) as avg_count by src_ip, dest_host
+| where stdev_count < 1 AND avg_count > 5 AND count > 0
+| table src_ip, dest_host, _time, count, stdev_count
+
+`comment("Long Base64 in URI")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler
+| rex field=url "(?<b64_param>[A-Za-z0-9+/=]{50,})"
+| where isnotnull(b64_param)
+| table _time, src_ip, dest_host, url, b64_param
+
+`comment("Suspicious User-Agent")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler
+| where len(useragent) < 20 OR useragent LIKE "%curl%" OR useragent LIKE "%wget%" OR useragent LIKE "%python%"
+| stats count by src_ip, useragent, dest_host
+| table src_ip, useragent, dest_host, count
+
+`comment("High Frequency Connections to Single Host")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler
+| stats count by src_ip, dest_host
+| where count > 1000
+| table src_ip, dest_host, count
+| sort - count

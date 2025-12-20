@@ -1,0 +1,47 @@
+id: PB-T1592-001
+name: "Gather Victim Host Information Detection"
+description: "Detect attempts to gather information about victim hosts through various reconnaissance methods"
+
+mitre:
+  technique: T1592
+  tactic: reconnaissance
+  subtechniques: ['T1592.001', 'T1592.002', 'T1592.004']
+
+severity: low
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Web Server Logs
+  - DNS Logs
+  - Network Traffic
+
+hunt_hypothesis: |
+  Adversaries gather host information to identify potential targets and vulnerabilities.
+  This includes:
+  1. Browser fingerprinting via JavaScript
+  2. OS/browser detection through HTTP headers
+  3. Technology stack enumeration
+  4. Email header analysis for mail server info
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Review source IPs accessing multiple unique endpoints
+  - Check for unusual User-Agent patterns
+  - Analyze request patterns for fingerprinting behavior
+  - Correlate with known threat actor infrastructure
+
+false_positives:
+  - Web analytics services
+  - Legitimate marketing tools
+  - Browser compatibility testing
+
+references:
+  - https://attack.mitre.org/techniques/T1592/
+
+tags: [reconnaissance, fingerprinting, osint, external]

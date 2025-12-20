@@ -1,0 +1,24 @@
+title: Suspicious Process Access to LSASS
+id: b3456789-cdef-3456-789a-cdef3456789b
+status: production
+level: high
+logsource:
+    product: windows
+    category: process_access
+detection:
+    selection:
+        TargetImage|endswith: '\lsass.exe'
+        GrantedAccess:
+            - '0x1FFFFF'
+            - '0x1010'
+            - '0x1410'
+            - '0x143A'
+    filter:
+        SourceImage|endswith:
+            - '\MsMpEng.exe'
+            - '\vmtoolsd.exe'
+    condition: selection and not filter
+tags:
+    - attack.execution
+    - attack.t1106
+    - attack.credential_access

@@ -1,0 +1,49 @@
+id: PB-T1078-001
+name: "Valid Accounts Abuse Detection"
+description: "Detect abuse of valid credentials including default credentials, leaked credentials, and compromised accounts"
+
+mitre:
+  technique: T1078
+  tactic: initial-access
+  subtechniques: ['T1078.001', 'T1078.002', 'T1078.003', 'T1078.004']
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Authentication Logs
+  - Windows Security Events
+  - Cloud Audit Logs
+  - VPN Logs
+
+hunt_hypothesis: |
+  Adversaries use valid credentials obtained through various means:
+  1. Default/unchanged credentials
+  2. Credentials from data breaches
+  3. Credential stuffing attacks
+  4. Password spraying
+  5. Purchased credentials from dark web
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Check if source IP is known/expected for user
+  - Review authentication times - unusual hours?
+  - Check for concurrent sessions from different locations
+  - Review what actions were taken after authentication
+  - Check user's recent credential changes
+
+false_positives:
+  - Users traveling
+  - VPN usage
+  - Shared accounts (should be eliminated)
+
+references:
+  - https://attack.mitre.org/techniques/T1078/
+
+tags: [initial-access, credentials, authentication, brute-force]

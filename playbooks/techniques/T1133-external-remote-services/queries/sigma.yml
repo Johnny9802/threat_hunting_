@@ -1,0 +1,17 @@
+title: RDP Brute Force Attempt
+id: d1234567-rdp-brute-detect-001
+status: production
+level: high
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4625
+        LogonType: 10
+    timeframe: 15m
+    condition: selection | count(IpAddress) by TargetUserName > 10
+tags:
+    - attack.initial_access
+    - attack.t1133
+    - attack.t1110

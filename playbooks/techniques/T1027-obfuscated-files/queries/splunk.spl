@@ -1,0 +1,19 @@
+`comment("=== PB-T1027-001 - Obfuscated Files and Information Detection ===")`
+`comment("MITRE ATT&CK: T1027 - defense-evasion")`
+
+`comment("PowerShell Obfuscation Detection")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| eval obfuscation_score=0
+| eval obfuscation_score=if(like(CommandLine, "%`%"), obfuscation_score+1, obfuscation_score)
+| eval obfuscation_score=if(like(CommandLine, "%+%+%"), obfuscation_score+1, obfuscation_score)
+| eval obfuscation_score=if(like(CommandLine, "%$%$%$%"), obfuscation_score+1, obfuscation_score)
+| eval obfuscation_score=if(like(CommandLine, "%-join%"), obfuscation_score+1, obfuscation_score)
+| eval obfuscation_score=if(like(CommandLine, "%-replace%"), obfuscation_score+1, obfuscation_score)
+| eval obfuscation_score=if(like(CommandLine, "%[char]%"), obfuscation_score+1, obfuscation_score)
+| where obfuscation_score >= 2
+| table _time, ComputerName, User, obfuscation_score, CommandLine
+
+`comment("Certutil Encode/Decode")`
+index=sysmon EventCode=1 Image="*\certutil.exe"
+| where CommandLine LIKE "%-encode%" OR CommandLine LIKE "%-decode%" OR CommandLine LIKE "%-urlcache%"
+| table _time, ComputerName, User, CommandLine

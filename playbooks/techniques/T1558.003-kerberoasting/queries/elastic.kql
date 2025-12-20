@@ -1,0 +1,10 @@
+// === PB-T1558-003 - Kerberoasting Detection ===
+// MITRE ATT&CK: T1558.003 - credential-access
+
+// RC4 encrypted ticket requests
+event.code:4769 AND winlog.event_data.TicketEncryptionType:(0x17 OR 0x18)
+
+// Mass service ticket requests
+event.code:4769
+| stats cardinality(winlog.event_data.ServiceName) as unique_services by user.name, source.ip
+| where unique_services > 10

@@ -1,0 +1,48 @@
+id: PB-T1102-001
+name: "Web Service C2 Detection"
+description: "Detect use of legitimate web services for command and control"
+
+mitre:
+  technique: T1102
+  tactic: command-and-control
+  subtechniques: ['T1102.002', 'T1102.003']
+
+severity: high
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Network Traffic"
+  - "Proxy Logs"
+  - "DNS Logs"
+
+hunt_hypothesis: |
+  Adversaries use legitimate web services for C2 to blend with normal traffic:
+  1. Pastebin, GitHub, Dropbox for C2 instructions
+  2. Twitter, Telegram APIs for commands
+  3. Google Docs/Sheets for data exchange
+  4. Discord/Slack webhooks
+  5. Cloud storage services
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Analyze frequency and pattern of connections"
+  - "Review user-agent strings and request headers"
+  - "Check for encoded or encrypted payloads"
+  - "Correlate with endpoint process activity"
+  - "Identify automated vs human-initiated traffic"
+
+false_positives:
+  - "Legitimate use of cloud services"
+  - "Developer tools"
+  - "Collaboration platforms"
+
+tags: ['command-and-control', 'c2', 'web-service', 'covert']
+
+references:
+  - "https://attack.mitre.org/techniques/T1102/"

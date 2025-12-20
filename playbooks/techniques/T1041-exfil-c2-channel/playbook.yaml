@@ -1,0 +1,48 @@
+id: PB-T1041-001
+name: "Exfiltration Over C2 Channel Detection"
+description: "Detect data exfiltration over the existing command and control channel"
+
+mitre:
+  technique: T1041
+  tactic: exfiltration
+  subtechniques: []
+
+severity: critical
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Network Traffic"
+  - "Process Monitoring"
+  - "Netflow"
+
+hunt_hypothesis: |
+  Adversaries exfiltrate data through the same channel used for C2:
+  1. Large HTTP POST requests to suspicious domains
+  2. Encrypted data in DNS TXT records
+  3. Chunked data transfer patterns
+  4. Unusual outbound data volumes
+  5. Base64 encoded data in HTTP headers
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Analyze network traffic volume anomalies"
+  - "Review HTTP request/response sizes"
+  - "Check for encoded data in unusual fields"
+  - "Correlate with known C2 infrastructure"
+  - "Identify data types being exfiltrated"
+
+false_positives:
+  - "Cloud backup services"
+  - "File sync applications"
+  - "Large email attachments"
+
+tags: ['exfiltration', 'c2', 'data-theft', 'critical']
+
+references:
+  - "https://attack.mitre.org/techniques/T1041/"

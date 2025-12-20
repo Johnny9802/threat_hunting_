@@ -1,0 +1,47 @@
+id: PB-T1036-001
+name: "Masquerading Detection"
+description: "Detect masquerading attempts where adversaries disguise malicious activity as legitimate"
+
+mitre:
+  technique: T1036
+  tactic: defense-evasion
+  subtechniques: ['T1036.003', 'T1036.004', 'T1036.005']
+
+severity: high
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Process Creation"
+  - "File Monitoring"
+  - "Binary Metadata"
+
+hunt_hypothesis: |
+  Adversaries masquerade malicious files and processes as legitimate ones:
+  1. Naming executables similar to system binaries (svchost vs svch0st)
+  2. Running malicious code from legitimate directories
+  3. Manipulating file extensions
+  4. Spoofing file signatures and metadata
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Compare binary hashes against known good baselines"
+  - "Verify digital signatures on suspicious executables"
+  - "Check file locations against expected paths"
+  - "Review process command lines for typosquatting"
+  - "Analyze file metadata and compile timestamps"
+
+false_positives:
+  - "Renamed legitimate tools"
+  - "Portable applications"
+  - "Custom scripts"
+
+tags: ['defense-evasion', 'masquerading', 'lolbas']
+
+references:
+  - "https://attack.mitre.org/techniques/T1036/"

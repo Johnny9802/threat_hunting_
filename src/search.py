@@ -1,6 +1,7 @@
 """Search module for finding playbooks."""
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from src.parser import PlaybookParser
 
 
@@ -21,7 +22,7 @@ class PlaybookSearch:
         technique: Optional[str] = None,
         tactic: Optional[str] = None,
         tag: Optional[str] = None,
-        severity: Optional[str] = None
+        severity: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Search playbooks with multiple criteria.
 
@@ -40,7 +41,7 @@ class PlaybookSearch:
             technique=technique,
             tactic=tactic,
             tag=tag,
-            severity=severity
+            severity=severity,
         )
 
     def get_by_id(self, playbook_id: str) -> Dict[str, Any]:

@@ -1,0 +1,46 @@
+id: PB-T1547-001
+name: "Registry Run Key Persistence Detection"
+description: "Detect persistence via Registry Run keys including HKLM and HKCU autostart locations"
+
+mitre:
+  technique: T1547.001
+  tactic: persistence
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - Windows Security Events
+  - EDR
+
+hunt_hypothesis: |
+  Run keys provide simple persistence:
+  1. HKLM\Software\Microsoft\Windows\CurrentVersion\Run
+  2. HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+  3. RunOnce variants
+  4. Explorer\Shell Folders
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify what executable is set to run
+  - Check file reputation and signature
+  - Review process that made the registry change
+  - Check for similar changes across environment
+
+false_positives:
+  - Software installations
+  - Legitimate applications
+  - User preferences
+
+references:
+  - https://attack.mitre.org/techniques/T1547/
+
+tags: [persistence, registry, run-keys, windows]

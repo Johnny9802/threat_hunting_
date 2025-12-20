@@ -1,0 +1,17 @@
+`comment("=== PB-T1057-001 - Process Discovery Detection ===")`
+`comment("MITRE ATT&CK: T1057 - discovery")`
+
+`comment("Tasklist Command")`
+index=sysmon EventCode=1 Image="*\tasklist.exe"
+| stats count by ComputerName, User, ParentImage
+| where count > 3
+
+`comment("WMIC Process Enumeration")`
+index=sysmon EventCode=1 Image="*\wmic.exe"
+| where CommandLine LIKE "%process%list%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("PowerShell Process Enumeration")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| where CommandLine LIKE "%Get-Process%" OR CommandLine LIKE "%ps %"
+| table _time, ComputerName, User, CommandLine

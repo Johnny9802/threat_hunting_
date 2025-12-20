@@ -1,0 +1,24 @@
+`comment("=== PB-T1133-001 - External Remote Services Abuse Detection ===")`
+`comment("MITRE ATT&CK: T1133 - initial-access")`
+
+`comment("VPN Connection Anomaly")`
+index=vpn sourcetype=cisco:vpn OR sourcetype=paloalto:globalprotect
+| iplocation src_ip
+| stats count by user, Country, src_ip
+| eventstats dc(Country) as country_count by user
+| where country_count > 2
+
+`comment("RDP Brute Force Success")`
+index=windows sourcetype=windows:security EventCode=4625 LogonType=10
+| bin _time span=15m
+| stats count as failures by src_ip, dest, user
+| where failures > 10
+| join src_ip, dest [search index=windows EventCode=4624 LogonType=10 | stats count as successes by src_ip, dest, user]
+| where successes > 0
+
+`comment("SSH Unusual Access")`
+index=linux sourcetype=linux:auth "Accepted"
+| rex "Accepted (?<auth_method>\w+) for (?<user>\w+) from (?<src_ip>[\d\.]+)"
+| iplocation src_ip
+| where Country != "Italy" AND Country != "Expected Country"
+| stats count by user, src_ip, Country

@@ -1,0 +1,12 @@
+`comment("System Binary Running from Wrong Location")`
+index=sysmon EventCode=1
+| rex field=Image "(?<filename>[^\\]+)$"
+| where filename IN ("svchost.exe", "csrss.exe", "lsass.exe", "services.exe", "smss.exe", "winlogon.exe")
+| where NOT match(Image, "(?i)C:\\Windows\\System32")
+| stats count by Image, CommandLine, ParentImage, Computer
+
+`comment("Typosquatting Detection")`
+index=sysmon EventCode=1
+| rex field=Image "(?<filename>[^\\]+)$"
+| where match(filename, "(?i)(svch0st|scvhost|csvhost|lssas|lsas|csrs)")
+| stats count by Image, ParentImage, CommandLine, Computer

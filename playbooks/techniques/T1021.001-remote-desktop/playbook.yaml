@@ -1,0 +1,45 @@
+id: PB-T1021-001
+name: "Remote Desktop Protocol Lateral Movement Detection"
+description: "Detect lateral movement via RDP including suspicious connections and pass-the-hash"
+
+mitre:
+  technique: T1021.001
+  tactic: lateral-movement
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Windows TerminalServices Logs
+
+hunt_hypothesis: |
+  RDP lateral movement indicators:
+  1. RDP to many hosts from single source
+  2. RDP at unusual times
+  3. RDP from unexpected source hosts
+  4. RDP with compromised credentials
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Verify RDP session is authorized
+  - Check source host for compromise
+  - Review actions taken during session
+  - Check for credential abuse
+
+false_positives:
+  - IT support
+  - Remote work
+  - Jump servers
+
+references:
+  - https://attack.mitre.org/techniques/T1021/
+
+tags: [lateral-movement, rdp, remote-desktop]

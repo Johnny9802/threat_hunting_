@@ -1,0 +1,13 @@
+// === PB-T1204-001 - Malicious Link User Execution Detection ===
+// MITRE ATT&CK: T1204.001 - execution
+
+// Recently registered domain access
+destination.domain:* AND NOT destination.domain:*.local
+| where domain_registration_date > now() - 30d
+
+// URL shortener redirect analysis
+url.original:(*bit.ly* OR *tinyurl.com* OR *t.co* OR *goo.gl*)
+
+// Potential credential phishing page
+url.path:(*login* OR *signin* OR *password* OR *auth*) AND
+NOT destination.domain:(*microsoft.com OR *google.com OR *okta.com)

@@ -1,0 +1,13 @@
+// === PB-T1087-001 - Account Discovery Detection ===
+// MITRE ATT&CK: T1087.001 - discovery
+
+// Net user enumeration
+event.code:1 AND process.name:(net.exe OR net1.exe) AND
+process.command_line:(*user* OR *localgroup* OR *group*)
+
+// PowerShell AD enumeration
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+process.command_line:(*Get-ADUser* OR *Get-ADGroupMember* OR *Get-LocalUser*)
+
+// BloodHound indicators
+event.code:1 AND process.command_line:(*sharphound* OR *bloodhound*)

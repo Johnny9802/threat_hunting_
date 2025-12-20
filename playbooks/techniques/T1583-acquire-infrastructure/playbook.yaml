@@ -1,0 +1,48 @@
+id: PB-T1583-001
+name: "Acquire Infrastructure Detection"
+description: "Detect use of newly acquired infrastructure for malicious purposes"
+
+mitre:
+  technique: T1583
+  tactic: resource-development
+  subtechniques: ['T1583.001', 'T1583.003', 'T1583.006']
+
+severity: medium
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "DNS Logs"
+  - "Proxy Logs"
+  - "Threat Intelligence"
+
+hunt_hypothesis: |
+  Adversaries acquire infrastructure including domains, servers, and web services before attacks.
+  Indicators include:
+  1. Newly registered domains (< 30 days old)
+  2. DNS lookups to suspicious TLDs
+  3. Connections to VPS/cloud providers from unusual endpoints
+  4. Look-alike domains targeting the organization
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Query domain registration date (WHOIS)"
+  - "Check domain reputation across threat intel feeds"
+  - "Analyze DNS resolution patterns"
+  - "Look for typosquatting attempts against company domains"
+  - "Review any downloaded content from suspicious domains"
+
+false_positives:
+  - "New legitimate business domains"
+  - "Marketing campaign domains"
+  - "Cloud service providers"
+
+tags: ['resource-development', 'infrastructure', 'domain', 'dns']
+
+references:
+  - "https://attack.mitre.org/techniques/T1583/"

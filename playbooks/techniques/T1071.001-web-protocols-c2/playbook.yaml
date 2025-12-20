@@ -1,0 +1,47 @@
+id: PB-T1071-001
+name: "Web Protocols Command and Control Detection"
+description: "Detect C2 communication over HTTP/HTTPS including beaconing, data encoding, and suspicious patterns"
+
+mitre:
+  technique: T1071.001
+  tactic: command-and-control
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Web Proxy Logs
+  - DNS Logs
+  - Network Traffic
+  - Firewall Logs
+
+hunt_hypothesis: |
+  C2 over web protocols:
+  1. Regular beacon intervals
+  2. Base64/encoded data in URI or POST
+  3. Long lived HTTPS connections
+  4. Suspicious User-Agent strings
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Analyze beacon timing patterns
+  - Check destination reputation
+  - Review data transfer volumes
+  - Identify affected endpoints
+
+false_positives:
+  - Cloud services
+  - Update mechanisms
+  - Legitimate polling
+
+references:
+  - https://attack.mitre.org/techniques/T1071/
+
+tags: [c2, http, https, beaconing, command-and-control]

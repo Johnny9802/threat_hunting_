@@ -1,11 +1,11 @@
 """AI Assistant module for threat hunting playbook analysis and generation."""
 
 import os
-from typing import Dict, Any, Optional, List
 from pathlib import Path
-from openai import OpenAI
-from dotenv import load_dotenv
+from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
+from openai import OpenAI
 
 # System prompt for the AI assistant
 SYSTEM_PROMPT = """You are an expert Threat Hunter and Detection Engineer with 10+ years of experience in SOC enterprise environments.
@@ -55,9 +55,9 @@ class AIAssistant:
         """Initialize the AI assistant with API credentials."""
         load_dotenv()
 
-        self.provider = os.getenv('AI_PROVIDER', 'groq').lower()
-        self.groq_api_key = os.getenv('GROQ_API_KEY')
-        self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.provider = os.getenv("AI_PROVIDER", "groq").lower()
+        self.groq_api_key = os.getenv("GROQ_API_KEY")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
 
         # Initialize client
         self.client: Optional[OpenAI] = None
@@ -66,19 +66,18 @@ class AIAssistant:
 
     def _initialize_client(self):
         """Initialize the appropriate AI client."""
-        if self.provider == 'groq' and self.groq_api_key:
+        if self.provider == "groq" and self.groq_api_key:
             # Use Groq API (OpenAI-compatible)
             self.client = OpenAI(
-                api_key=self.groq_api_key,
-                base_url="https://api.groq.com/openai/v1"
+                api_key=self.groq_api_key, base_url="https://api.groq.com/openai/v1"
             )
-            self.model = os.getenv('GROQ_MODEL', 'llama-3.1-70b-versatile')
+            self.model = os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile")
 
         elif self.openai_api_key:
             # Fallback to OpenAI
             self.client = OpenAI(api_key=self.openai_api_key)
-            self.model = os.getenv('OPENAI_MODEL', 'gpt-4-turbo-preview')
-            self.provider = 'openai'
+            self.model = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+            self.provider = "openai"
 
         else:
             # No API key available
@@ -159,7 +158,9 @@ Be specific and actionable."""
 
         return self._chat(prompt)
 
-    def suggest_next_steps(self, finding: str, playbook_data: Optional[Dict[str, Any]] = None) -> str:
+    def suggest_next_steps(
+        self, finding: str, playbook_data: Optional[Dict[str, Any]] = None
+    ) -> str:
         """Suggest investigation steps based on a finding.
 
         Args:
@@ -177,7 +178,9 @@ Be specific and actionable."""
 
         context = ""
         if playbook_data:
-            context = f"\nPlaybook context:\n{self._format_playbook_for_ai(playbook_data)}"
+            context = (
+                f"\nPlaybook context:\n{self._format_playbook_for_ai(playbook_data)}"
+            )
 
         prompt = f"""A threat hunter found this suspicious activity:
 {finding}
@@ -195,10 +198,7 @@ Be specific and actionable with exact field names and query examples."""
         return self._chat(prompt)
 
     def generate_variant(
-        self,
-        playbook_data: Dict[str, Any],
-        target_env: str,
-        target_siem: str
+        self, playbook_data: Dict[str, Any], target_env: str, target_siem: str
     ) -> str:
         """Generate a variant of a playbook for a different environment.
 
@@ -256,7 +256,7 @@ Provide a complete, copy-paste ready query with detailed comments."""
         ]
 
         # Add queries
-        queries_content = playbook_data.get('queries_content', {})
+        queries_content = playbook_data.get("queries_content", {})
         if queries_content:
             lines.append("\nQueries:")
             for siem, query in queries_content.items():
@@ -264,18 +264,18 @@ Provide a complete, copy-paste ready query with detailed comments."""
                 lines.append(query)
 
         # Add investigation steps
-        if playbook_data.get('investigation_steps'):
+        if playbook_data.get("investigation_steps"):
             lines.append("\nInvestigation Steps:")
-            for step in playbook_data['investigation_steps']:
+            for step in playbook_data["investigation_steps"]:
                 lines.append(f"- {step}")
 
         # Add false positives
-        if playbook_data.get('false_positives'):
+        if playbook_data.get("false_positives"):
             lines.append("\nFalse Positives:")
-            for fp in playbook_data['false_positives']:
+            for fp in playbook_data["false_positives"]:
                 lines.append(f"- {fp}")
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _chat(self, prompt: str) -> str:
         """Send a chat request to the AI.
@@ -294,7 +294,7 @@ Provide a complete, copy-paste ready query with detailed comments."""
                 model=self.model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
                 max_tokens=2000,

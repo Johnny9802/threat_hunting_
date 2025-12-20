@@ -120,6 +120,40 @@
       "items": {
         "type": "string"
       }
+    },
+    "response": {
+      "type": "object",
+      "description": "Incident response actions by severity",
+      "properties": {
+        "containment": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Immediate containment actions"
+        },
+        "eradication": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Steps to remove the threat"
+        },
+        "recovery": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Recovery and restoration steps"
+        },
+        "quick_wins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Quick actions for immediate risk reduction"
+        }
+      }
     }
   }
 }

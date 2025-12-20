@@ -1,0 +1,19 @@
+`comment("=== PB-T1547-001 - Registry Run Key Persistence Detection ===")`
+`comment("MITRE ATT&CK: T1547.001 - persistence")`
+
+`comment("Registry Run Key Modifications")`
+index=sysmon EventCode=13
+| where TargetObject LIKE "%\CurrentVersion\Run%" OR TargetObject LIKE "%\CurrentVersion\RunOnce%"
+| table _time, ComputerName, User, Image, TargetObject, Details
+
+`comment("Run Key Set via reg.exe")`
+index=sysmon EventCode=1 Image="*\reg.exe"
+| where CommandLine LIKE "%CurrentVersion\Run%"
+| table _time, ComputerName, User, CommandLine, ParentImage
+
+`comment("Suspicious Run Key Values")`
+index=sysmon EventCode=13
+| where TargetObject LIKE "%\CurrentVersion\Run%"
+| rex field=Details "(?<run_path>.+)"
+| where run_path LIKE "%\Temp\%" OR run_path LIKE "%\AppData\%" OR run_path LIKE "%.ps1%" OR run_path LIKE "%powershell%"
+| table _time, ComputerName, User, TargetObject, Details

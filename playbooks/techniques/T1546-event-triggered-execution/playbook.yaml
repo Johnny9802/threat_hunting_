@@ -1,0 +1,48 @@
+id: PB-T1546-001
+name: "Event Triggered Execution Detection"
+description: "Detect persistence through event-triggered execution mechanisms"
+
+mitre:
+  technique: T1546
+  tactic: persistence
+  subtechniques: ['T1546.001', 'T1546.003', 'T1546.008', 'T1546.015']
+
+severity: high
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Windows Registry"
+  - "Process Creation"
+  - "File Creation"
+
+hunt_hypothesis: |
+  Adversaries abuse event-triggered execution for persistence:
+  1. Application Shimming (T1546.011)
+  2. Image File Execution Options (T1546.012)
+  3. WMI Event Subscription (T1546.003)
+  4. PowerShell Profile modification (T1546.013)
+  5. Accessibility Features (T1546.008)
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Review WMI permanent event subscriptions"
+  - "Check IFEO debugger registry keys"
+  - "Analyze PowerShell profile scripts"
+  - "Look for accessibility feature replacement"
+  - "Review AppInit_DLLs and AppCert registry keys"
+
+false_positives:
+  - "Software installers"
+  - "System management tools"
+  - "Accessibility software"
+
+tags: ['persistence', 'event-triggered', 'wmi', 'registry']
+
+references:
+  - "https://attack.mitre.org/techniques/T1546/"

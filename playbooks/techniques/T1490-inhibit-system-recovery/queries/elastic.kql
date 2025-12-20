@@ -1,0 +1,11 @@
+// === PB-T1490-001 - Inhibit System Recovery Detection ===
+// MITRE ATT&CK: T1490 - impact
+
+// VSS deletion
+event.code:1 AND process.name:vssadmin.exe AND process.command_line:*delete*shadow*
+
+// WMIC shadow delete
+event.code:1 AND process.name:wmic.exe AND process.command_line:*shadowcopy*delete*
+
+// BCDEdit recovery disable
+event.code:1 AND process.name:bcdedit.exe AND process.command_line:(*recoveryenabled*No* OR *bootstatuspolicy*ignoreallfailures*)

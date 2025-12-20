@@ -1,0 +1,14 @@
+title: Large ICMP Traffic - Potential Data Exfiltration
+id: z1234567-icmp-exfil-001
+status: production
+level: high
+logsource:
+    category: firewall
+detection:
+    selection:
+        protocol: 'icmp'
+    # Threshold requires SIEM aggregation
+    condition: selection
+tags:
+    - attack.exfiltration
+    - attack.t1048

@@ -1,0 +1,3 @@
+(process.command_line:(*findstr* AND *password*) OR
+process.command_line:(*Select-String* AND *password*)) OR
+registry.path:(*PuTTY*Sessions* OR *WinSCP* OR *RealVNC*)

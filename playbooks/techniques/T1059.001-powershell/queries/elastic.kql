@@ -1,0 +1,18 @@
+// === PB-T1059-001 - Malicious PowerShell Execution Detection ===
+// MITRE ATT&CK: T1059.001 - execution
+
+// Encoded PowerShell
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+process.command_line:(*-enc* OR *-e * OR *-encodedcommand*)
+
+// Download cradles
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+process.command_line:(*IEX* OR *Invoke-Expression* OR *DownloadString* OR *Net.WebClient* OR *Start-BitsTransfer*)
+
+// AMSI bypass
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+process.command_line:(*amsi* OR *AmsiUtils* OR *amsiInitFailed*)
+
+// Office spawning PowerShell
+event.code:1 AND process.name:(powershell.exe OR pwsh.exe) AND
+process.parent.name:(winword.exe OR excel.exe OR outlook.exe OR powerpnt.exe)

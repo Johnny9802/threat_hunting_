@@ -1,0 +1,47 @@
+id: PB-T1027-001
+name: "Obfuscated Files and Information Detection"
+description: "Detect use of obfuscation to hide malicious code including encoding, encryption, and packing"
+
+mitre:
+  technique: T1027
+  tactic: defense-evasion
+  subtechniques: ['T1027.001', 'T1027.002', 'T1027.003', 'T1027.004', 'T1027.005']
+
+severity: medium
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - PowerShell Logs
+  - EDR
+
+hunt_hypothesis: |
+  Obfuscation techniques include:
+  1. Base64 encoding
+  2. XOR encoding
+  3. String concatenation
+  4. Variable substitution
+  5. Compression and packing
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Decode obfuscated content
+  - Analyze deobfuscated payload
+  - Check for known malware signatures
+  - Identify C2 addresses or IOCs
+
+false_positives:
+  - Legitimate encoded data
+  - DRM software
+  - Compiled code
+
+references:
+  - https://attack.mitre.org/techniques/T1027/
+
+tags: [defense-evasion, obfuscation, encoding, packing]

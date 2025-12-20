@@ -1,0 +1,13 @@
+// === PB-T1071-001 - Web Protocols Command and Control Detection ===
+// MITRE ATT&CK: T1071.001 - command-and-control
+
+// HTTP beaconing pattern
+event.category:network AND destination.port:(80 OR 443)
+| stats count() by source.ip, destination.domain
+| where count > 1000
+
+// Base64 in URL
+url.query:*[A-Za-z0-9+/=]{50,}*
+
+// Suspicious User-Agent
+user_agent.original:(*curl* OR *wget* OR *python* OR *Go-http-client*)

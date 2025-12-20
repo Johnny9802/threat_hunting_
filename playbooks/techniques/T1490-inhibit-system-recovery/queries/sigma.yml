@@ -1,0 +1,22 @@
+title: Shadow Copy Deletion
+id: bb123456-vss-delete-001
+status: production
+level: critical
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_vssadmin:
+        Image|endswith: '\vssadmin.exe'
+        CommandLine|contains|all:
+            - 'delete'
+            - 'shadows'
+    selection_wmic:
+        Image|endswith: '\wmic.exe'
+        CommandLine|contains|all:
+            - 'shadowcopy'
+            - 'delete'
+    condition: selection_vssadmin or selection_wmic
+tags:
+    - attack.impact
+    - attack.t1490

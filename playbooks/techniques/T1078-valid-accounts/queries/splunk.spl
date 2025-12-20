@@ -1,0 +1,28 @@
+`comment("=== PB-T1078-001 - Valid Accounts Abuse Detection ===")`
+`comment("MITRE ATT&CK: T1078 - initial-access")`
+
+`comment("Impossible Travel Detection")`
+index=auth sourcetype=windows:security EventCode=4624 LogonType=10
+| iplocation src_ip
+| stats earliest(_time) as first_login latest(_time) as last_login values(City) as cities values(Country) as countries dc(src_ip) as unique_ips by user
+| where unique_ips > 1
+| eval time_diff_hours = (last_login - first_login) / 3600
+| where time_diff_hours < 2 AND mvcount(countries) > 1
+
+`comment("Password Spraying Detection")`
+index=auth (sourcetype=windows:security EventCode=4625) OR (sourcetype=linux:auth "Failed password")
+| bin _time span=10m
+| stats dc(user) as unique_users count as total_failures by src_ip, _time
+| where unique_users > 10 AND total_failures > 20
+
+`comment("Off-Hours Authentication")`
+index=auth sourcetype=windows:security EventCode=4624 LogonType IN (2,10)
+| eval hour=strftime(_time, "%H")
+| eval day=strftime(_time, "%A")
+| where (hour < 6 OR hour > 22) OR day IN ("Saturday", "Sunday")
+| stats count by user, src_ip, hour, day
+
+`comment("Default Credentials Usage")`
+index=auth (user=admin OR user=administrator OR user=root OR user=guest OR user=default)
+| stats count by user, src_ip, dest, action
+| where action="success" 

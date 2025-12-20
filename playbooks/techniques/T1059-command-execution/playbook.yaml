@@ -77,3 +77,38 @@ references:
   - https://github.com/redcanaryco/atomic-red-team/tree/master/atomics/T1059.001
 
 tags: [powershell, command-line, execution, obfuscation, living-off-the-land, scripts]
+
+response:
+  quick_wins:
+    - Isolate affected endpoint from network if malicious execution confirmed
+    - Kill suspicious PowerShell/cmd.exe processes immediately
+    - Block identified C2 domains/IPs at firewall and proxy
+    - Disable compromised user account pending investigation
+    - Enable PowerShell script block logging if not already active
+
+  containment:
+    - Network isolation: Disconnect compromised hosts from network
+    - Disable user accounts showing suspicious command execution patterns
+    - Block malicious file hashes in EDR/AV across all endpoints
+    - Implement temporary GPO to restrict PowerShell execution policy
+    - Configure firewall rules to block identified malicious domains/IPs
+    - Enable constrained language mode for PowerShell if feasible
+
+  eradication:
+    - Remove malicious scripts and payloads from identified locations
+    - Delete persistence mechanisms (scheduled tasks, registry run keys, WMI subscriptions)
+    - Terminate all malicious processes and child processes
+    - Remove any created user accounts or modified accounts
+    - Clear suspicious registry keys and values
+    - Scan and clean memory of affected systems
+    - Remove malicious DLLs or injected modules
+
+  recovery:
+    - Restore systems from known good backups if heavily compromised
+    - Reset passwords for all affected user accounts
+    - Rebuild systems that had kernel-level compromise
+    - Re-enable user accounts after password reset and verification
+    - Restore network connectivity in controlled manner
+    - Monitor restored systems closely for 48-72 hours
+    - Update detection rules based on attack patterns observed
+    - Implement additional monitoring for similar techniques

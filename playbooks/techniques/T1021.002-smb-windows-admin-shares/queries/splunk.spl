@@ -1,0 +1,22 @@
+`comment("=== PB-T1021-002 - SMB/Windows Admin Shares Lateral Movement Detection ===")`
+`comment("MITRE ATT&CK: T1021.002 - lateral-movement")`
+
+`comment("Admin Share Access")`
+index=windows sourcetype=windows:security EventCode=5140
+| where ShareName IN ("\\*\C$", "\\*\ADMIN$", "\\*\IPC$")
+| stats count by IpAddress, SubjectUserName, ShareName, ObjectType
+| table IpAddress, SubjectUserName, ShareName, ObjectType, count
+
+`comment("File Copy to Admin Share")`
+index=windows sourcetype=windows:security EventCode=5145
+| where RelativeTargetName LIKE "%.exe%" OR RelativeTargetName LIKE "%.dll%" OR RelativeTargetName LIKE "%.ps1%"
+| table _time, IpAddress, SubjectUserName, ShareName, RelativeTargetName, AccessMask
+
+`comment("PsExec-like Behavior")`
+index=sysmon EventCode=11
+| where (TargetFilename LIKE "\\*\ADMIN$\%") OR (TargetFilename LIKE "\\*\C$\Windows\%")
+| table _time, ComputerName, User, Image, TargetFilename
+
+`comment("Remote Service Creation")`
+index=windows sourcetype=windows:security EventCode=4697
+| table _time, ComputerName, SubjectUserName, ServiceName, ServiceFileName

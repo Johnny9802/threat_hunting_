@@ -1,0 +1,13 @@
+// === PB-T1486-002 - Ransomware File Encryption Detection ===
+// MITRE ATT&CK: T1486 - impact
+
+// Known ransomware extensions
+event.code:11 AND file.extension:(encrypted OR locked OR crypt OR enc OR xxx)
+
+// Ransom note creation
+event.code:11 AND file.name:(*README*DECRYPT* OR *HOW_TO_RECOVER* OR *DECRYPT_INSTRUCTIONS*)
+
+// Mass file modifications
+event.code:2
+| stats count() by host.name, process.name
+| where count > 100

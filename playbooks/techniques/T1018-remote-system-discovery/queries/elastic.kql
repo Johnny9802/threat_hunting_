@@ -1,0 +1,1 @@
+process.command_line:(*net\ view* OR *net\ group*domain* OR *nltest*dclist* OR *Get-ADComputer* OR *dsquery\ computer*)

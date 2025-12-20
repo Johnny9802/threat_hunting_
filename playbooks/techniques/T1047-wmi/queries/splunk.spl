@@ -1,0 +1,22 @@
+`comment("=== PB-T1047-001 - WMI Execution Detection ===")`
+`comment("MITRE ATT&CK: T1047 - execution")`
+
+`comment("WMI Remote Process Execution")`
+index=sysmon EventCode=1 ParentImage="*\wmiprvse.exe"
+| where Image!="*\WmiPrvSE.exe"
+| stats count values(Image) as spawned_processes by ComputerName, User, CommandLine
+
+`comment("WMIC Process Call Create")`
+index=sysmon EventCode=1 Image="*\wmic.exe"
+| where CommandLine LIKE "%process%call%create%"
+| rex field=CommandLine "create\s+(?<executed_command>.+)"
+| table _time, ComputerName, User, CommandLine, executed_command
+
+`comment("WMI Event Subscription (Persistence)")`
+index=sysmon (EventCode=19 OR EventCode=20 OR EventCode=21)
+| table _time, ComputerName, EventType, Operation, User, Consumer, Filter
+
+`comment("Remote WMI Connections")`
+index=windows sourcetype=windows:security EventCode=4648
+| where TargetServerName!="localhost" AND ProcessName="*\wmiprvse.exe"
+| stats count by TargetServerName, TargetUserName, IpAddress

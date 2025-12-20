@@ -1,0 +1,14 @@
+title: Suspicious DNS Query Length
+id: y1234567-dns-tunnel-001
+status: production
+level: high
+logsource:
+    category: dns
+detection:
+    selection:
+        # DNS queries with long subdomains
+        query|re: '^[a-z0-9]{30,}\.'
+    condition: selection
+tags:
+    - attack.command_and_control
+    - attack.t1071.004

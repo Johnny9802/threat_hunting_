@@ -1,0 +1,3 @@
+(process.name:(svchost.exe OR csrss.exe OR lsass.exe OR services.exe) AND
+NOT process.executable:C\:\\Windows\\System32\*) OR
+process.name:(svch0st.exe OR scvhost.exe OR lssas.exe OR csrs.exe)

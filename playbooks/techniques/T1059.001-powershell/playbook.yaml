@@ -1,0 +1,48 @@
+id: PB-T1059-001
+name: "Malicious PowerShell Execution Detection"
+description: "Detect malicious PowerShell usage including encoded commands, download cradles, AMSI bypass, and obfuscation"
+
+mitre:
+  technique: T1059.001
+  tactic: execution
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows PowerShell Logs
+  - Sysmon
+  - Windows Security Events
+
+hunt_hypothesis: |
+  PowerShell is heavily abused by adversaries for:
+  1. Encoded command execution (-enc, -e)
+  2. Download and execute cradles (IEX, Invoke-Expression)
+  3. AMSI bypass techniques
+  4. Constrained Language Mode bypass
+  5. Living-off-the-land techniques
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Decode Base64 encoded commands
+  - Check for network connections from PowerShell
+  - Review downloaded files and execution
+  - Check for persistence mechanisms created
+  - Look for credential access attempts
+
+false_positives:
+  - System administration
+  - SCCM/MECM
+  - DSC configurations
+
+references:
+  - https://attack.mitre.org/techniques/T1059/
+
+tags: [execution, powershell, windows, lolbas, encoding]

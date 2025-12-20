@@ -1,0 +1,14 @@
+// === PB-T1547-001 - Registry Run Key Persistence Detection ===
+// MITRE ATT&CK: T1547.001 - persistence
+
+// Registry Run key modification
+event.code:13 AND
+registry.path:(*\CurrentVersion\Run* OR *\CurrentVersion\RunOnce*)
+
+// Reg.exe modifying Run keys
+event.code:1 AND process.name:reg.exe AND
+process.command_line:*CurrentVersion\Run*
+
+// Suspicious Run key values
+event.code:13 AND registry.path:*\CurrentVersion\Run* AND
+registry.data.strings:(*\Temp\* OR *\AppData\* OR *.ps1* OR *powershell*)

@@ -1,0 +1,46 @@
+id: PB-T1486-002
+name: "Ransomware File Encryption Detection"
+description: "Detect ransomware encryption activity based on file system changes and process behavior"
+
+mitre:
+  technique: T1486
+  tactic: impact
+  subtechniques: []
+
+severity: critical
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - EDR
+  - Windows Security Events
+
+hunt_hypothesis: |
+  Ransomware encryption indicators:
+  1. Mass file renames with new extension
+  2. High volume of file modifications
+  3. Ransom note file creation
+  4. Known ransomware process behavior
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - IMMEDIATELY isolate affected systems
+  - Identify ransomware variant
+  - Determine encryption scope
+  - Check for available backups
+
+false_positives:
+  - Legitimate encryption software
+  - File conversion tools
+  - Batch rename utilities
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+tags: [impact, ransomware, encryption, critical]

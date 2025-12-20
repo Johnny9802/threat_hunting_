@@ -1,0 +1,47 @@
+id: PB-T1055-001
+name: "Process Injection Detection"
+description: "Detect various process injection techniques used for privilege escalation and defense evasion"
+
+mitre:
+  technique: T1055
+  tactic: privilege-escalation
+  subtechniques: ['T1055.001', 'T1055.002', 'T1055.003', 'T1055.012']
+
+severity: critical
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Process Monitoring"
+  - "API Monitoring"
+  - "Sysmon"
+
+hunt_hypothesis: |
+  Adversaries inject code into legitimate processes to:
+  1. Execute under a different process context
+  2. Evade process-based defenses
+  3. Elevate privileges
+  Common techniques: DLL injection, PE injection, process hollowing, thread hijacking
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Analyze process trees for suspicious parent-child relationships"
+  - "Review memory allocations in system processes"
+  - "Check for CreateRemoteThread calls to system processes"
+  - "Look for anomalous modules loaded in trusted processes"
+  - "Correlate with network activity from injected processes"
+
+false_positives:
+  - "Anti-virus software"
+  - "System management tools"
+  - "Debugging utilities"
+
+tags: ['privilege-escalation', 'defense-evasion', 'injection', 'critical']
+
+references:
+  - "https://attack.mitre.org/techniques/T1055/"

@@ -1,0 +1,7 @@
+index=dns OR index=proxy
+| lookup domain_age_lookup domain AS query OUTPUT registration_date, domain_age_days
+| where domain_age_days < 30 OR isnull(domain_age_days)
+| rex field=query "(?<tld>\.[a-z]{2,})$"
+| search tld IN (".xyz", ".top", ".club", ".work", ".click", ".loan", ".online")
+| stats count dc(src_ip) as unique_clients by query, tld
+| where count > 5

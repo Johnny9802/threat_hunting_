@@ -1,0 +1,12 @@
+// === PB-T1003-001 - LSASS Memory Dumping Detection ===
+// MITRE ATT&CK: T1003.001 - credential-access
+
+// LSASS Access with suspicious access rights
+event.code:10 AND winlog.event_data.TargetImage:*lsass.exe AND
+winlog.event_data.GrantedAccess:(0x1010 OR 0x1410 OR 0x143a OR 0x1fffff)
+
+// ProcDump on LSASS
+event.code:1 AND process.name:*procdump* AND process.command_line:*lsass*
+
+// comsvcs MiniDump
+event.code:1 AND process.command_line:*comsvcs*MiniDump*

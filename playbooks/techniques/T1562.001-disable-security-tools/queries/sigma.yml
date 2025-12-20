@@ -1,0 +1,14 @@
+title: Windows Defender Disabled
+id: n1234567-defender-disabled-001
+status: production
+level: critical
+logsource:
+    product: windows
+    service: windefend
+detection:
+    selection:
+        EventID: 5001
+    condition: selection
+tags:
+    - attack.defense_evasion
+    - attack.t1562.001

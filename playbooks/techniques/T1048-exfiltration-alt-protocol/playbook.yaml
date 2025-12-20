@@ -1,0 +1,46 @@
+id: PB-T1048-001
+name: "Exfiltration Over Alternative Protocol Detection"
+description: "Detect data exfiltration using non-standard protocols or encrypted channels"
+
+mitre:
+  technique: T1048
+  tactic: exfiltration
+  subtechniques: ['T1048.001', 'T1048.002', 'T1048.003']
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Network Traffic
+  - Firewall Logs
+  - Proxy Logs
+
+hunt_hypothesis: |
+  Alternative exfiltration methods:
+  1. DNS tunneling
+  2. ICMP tunneling
+  3. Custom encrypted protocols
+  4. Steganography
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify the protocol being used
+  - Check data volume transferred
+  - Review destination reputation
+  - Identify affected systems
+
+false_positives:
+  - VPN traffic
+  - Legitimate encrypted protocols
+  - Cloud backup
+
+references:
+  - https://attack.mitre.org/techniques/T1048/
+
+tags: [exfiltration, data-theft, tunneling, dns]

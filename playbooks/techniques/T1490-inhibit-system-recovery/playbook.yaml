@@ -1,0 +1,44 @@
+id: PB-T1490-001
+name: "Inhibit System Recovery Detection"
+description: "Detect attempts to delete or disable system recovery features prior to ransomware deployment"
+
+mitre:
+  technique: T1490
+  tactic: impact
+  subtechniques: []
+
+severity: critical
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - Windows Security Events
+
+hunt_hypothesis: |
+  Recovery inhibition techniques:
+  1. Volume shadow copy deletion
+  2. bcdedit recovery disabling
+  3. Backup deletion
+  4. Safe mode boot manipulation
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Check for ransomware indicators
+  - Identify affected systems immediately
+  - Attempt to restore from backup
+  - Isolate affected systems
+
+false_positives:
+  - System maintenance
+  - Disk cleanup activities
+
+references:
+  - https://attack.mitre.org/techniques/T1490/
+
+tags: [impact, ransomware, recovery, vss, critical]

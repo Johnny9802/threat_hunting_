@@ -1,0 +1,46 @@
+id: PB-T1543-003
+name: "Malicious Windows Service Creation"
+description: "Detect creation of Windows services for persistence and privilege escalation"
+
+mitre:
+  technique: T1543.003
+  tactic: persistence
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Windows Security Events
+  - Sysmon
+  - System Event Log
+
+hunt_hypothesis: |
+  Adversaries create services for:
+  1. Persistence with automatic start
+  2. Running as SYSTEM
+  3. Surviving reboots
+  4. Hiding in plain sight among legitimate services
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Review service binary path and legitimacy
+  - Check service creation context
+  - Verify digital signature of binary
+  - Compare with baseline of expected services
+
+false_positives:
+  - Software installations
+  - IT deployments
+  - Monitoring agents
+
+references:
+  - https://attack.mitre.org/techniques/T1543/
+
+tags: [persistence, service, windows, privilege-escalation]

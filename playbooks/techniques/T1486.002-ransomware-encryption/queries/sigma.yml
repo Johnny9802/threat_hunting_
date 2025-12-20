@@ -1,0 +1,19 @@
+title: Ransomware File Extension Detection
+id: cc123456-ransomware-ext-001
+status: production
+level: critical
+logsource:
+    category: file_event
+    product: windows
+detection:
+    selection:
+        TargetFilename|endswith:
+            - '.encrypted'
+            - '.locked'
+            - '.crypt'
+            - '.enc'
+            - '.crypted'
+    condition: selection
+tags:
+    - attack.impact
+    - attack.t1486

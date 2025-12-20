@@ -1,0 +1,4 @@
+index=sysmon EventCode=1
+| search CommandLine="*net view*" OR CommandLine="*net group*Domain*" OR CommandLine="*nltest*/dclist*" OR CommandLine="*Get-ADComputer*" OR CommandLine="*dsquery computer*"
+| stats count values(CommandLine) as commands by User, Computer
+| where count > 3

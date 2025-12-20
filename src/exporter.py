@@ -1,14 +1,14 @@
 """Exporter module for extracting queries in SIEM-specific formats."""
 
-from pathlib import Path
-from typing import Dict, Any, Optional
 import os
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class QueryExporter:
     """Export queries for specific SIEM platforms."""
 
-    SUPPORTED_SIEMS = ['splunk', 'elastic', 'sigma']
+    SUPPORTED_SIEMS = ["splunk", "elastic", "sigma"]
 
     def __init__(self):
         """Initialize the exporter."""
@@ -18,7 +18,7 @@ class QueryExporter:
         self,
         playbook_data: Dict[str, Any],
         siem: str,
-        output_file: Optional[Path] = None
+        output_file: Optional[Path] = None,
     ) -> str:
         """Export a query for a specific SIEM.
 
@@ -42,7 +42,7 @@ class QueryExporter:
             )
 
         # Get query content
-        queries_content = playbook_data.get('queries_content', {})
+        queries_content = playbook_data.get("queries_content", {})
         query = queries_content.get(siem)
 
         if not query:
@@ -58,7 +58,7 @@ class QueryExporter:
         if output_file:
             output_file = Path(output_file)
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, 'w') as f:
+            with open(output_file, "w") as f:
                 f.write(full_query)
 
         return full_query
@@ -73,7 +73,7 @@ class QueryExporter:
         Returns:
             Formatted header comment
         """
-        comment_char = '#' if siem == 'sigma' else '#'
+        comment_char = "#" if siem == "sigma" else "#"
 
         header_lines = [
             f"{comment_char} Threat Hunting Query",
@@ -87,12 +87,10 @@ class QueryExporter:
             f"{comment_char} Description: {playbook_data.get('description')}",
         ]
 
-        return '\n'.join(header_lines)
+        return "\n".join(header_lines)
 
     def export_all_queries(
-        self,
-        playbook_data: Dict[str, Any],
-        output_dir: Path
+        self, playbook_data: Dict[str, Any], output_dir: Path
     ) -> Dict[str, Path]:
         """Export all available queries for a playbook.
 
@@ -107,19 +105,15 @@ class QueryExporter:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         exported = {}
-        playbook_id = playbook_data.get('id', 'unknown')
+        playbook_id = playbook_data.get("id", "unknown")
 
-        queries_content = playbook_data.get('queries_content', {})
+        queries_content = playbook_data.get("queries_content", {})
 
         for siem in queries_content.keys():
             if siem in self.SUPPORTED_SIEMS:
                 # Determine file extension
-                ext_map = {
-                    'splunk': 'spl',
-                    'elastic': 'kql',
-                    'sigma': 'yml'
-                }
-                ext = ext_map.get(siem, 'txt')
+                ext_map = {"splunk": "spl", "elastic": "kql", "sigma": "yml"}
+                ext = ext_map.get(siem, "txt")
 
                 # Generate filename
                 output_file = output_dir / f"{playbook_id}_{siem}.{ext}"
@@ -143,8 +137,9 @@ class QueryExporter:
         Returns:
             List of SIEM names
         """
-        queries_content = playbook_data.get('queries_content', {})
+        queries_content = playbook_data.get("queries_content", {})
         return [
-            siem for siem in self.SUPPORTED_SIEMS
+            siem
+            for siem in self.SUPPORTED_SIEMS
             if siem in queries_content and queries_content[siem]
         ]

@@ -1,0 +1,19 @@
+title: Admin Share Access
+id: u1234567-adminshare-access-001
+status: production
+level: high
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 5140
+        ShareName|contains:
+            - 'C$'
+            - 'ADMIN$'
+    filter:
+        SubjectUserName|contains: '$'  # Machine accounts
+    condition: selection and not filter
+tags:
+    - attack.lateral_movement
+    - attack.t1021.002

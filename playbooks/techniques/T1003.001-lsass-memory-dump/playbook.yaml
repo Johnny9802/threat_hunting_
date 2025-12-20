@@ -1,0 +1,46 @@
+id: PB-T1003-001
+name: "LSASS Memory Dumping Detection"
+description: "Detect attempts to dump LSASS memory for credential extraction using various tools and techniques"
+
+mitre:
+  technique: T1003.001
+  tactic: credential-access
+  subtechniques: []
+
+severity: critical
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Sysmon
+  - Windows Security Events
+  - EDR
+
+hunt_hypothesis: |
+  Credential dumping via LSASS:
+  1. Mimikatz and variants
+  2. ProcDump abuse
+  3. Task Manager memory dump
+  4. comsvcs.dll MiniDump
+  5. Direct LSASS access
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify the process accessing LSASS
+  - Check for credential usage after dump
+  - Review authentication logs for compromised accounts
+  - Force password reset for potentially compromised accounts
+
+false_positives:
+  - Legitimate memory dumps for debugging
+  - AV/EDR scanning LSASS
+
+references:
+  - https://attack.mitre.org/techniques/T1003/
+
+tags: [credential-access, lsass, mimikatz, critical]

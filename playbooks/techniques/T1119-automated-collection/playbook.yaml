@@ -1,0 +1,48 @@
+id: PB-T1119-001
+name: "Automated Collection Detection"
+description: "Detect automated collection of data from local and network sources"
+
+mitre:
+  technique: T1119
+  tactic: collection
+  subtechniques: []
+
+severity: medium
+author: "Threat Hunting Team"
+created: "2025-12-20"
+updated: "2025-12-20"
+
+data_sources:
+  - "Process Creation"
+  - "File Access"
+  - "Command Line"
+
+hunt_hypothesis: |
+  Adversaries automate data collection using:
+  1. Scripts to recursively find sensitive files
+  2. Tools that search for specific file types
+  3. Automated clipboard capture
+  4. Keyloggers and input capture
+  5. Batch file operations on multiple directories
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - "Identify the collection mechanism (script, tool, malware)"
+  - "Determine scope of collected data"
+  - "Review file access patterns"
+  - "Check for staging directories"
+  - "Look for subsequent exfiltration"
+
+false_positives:
+  - "Backup software"
+  - "File indexing services"
+  - "E-discovery tools"
+
+tags: ['collection', 'automation', 'data-theft']
+
+references:
+  - "https://attack.mitre.org/techniques/T1119/"

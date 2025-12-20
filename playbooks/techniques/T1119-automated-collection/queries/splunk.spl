@@ -1,0 +1,6 @@
+`comment("Automated File Collection")`
+index=sysmon EventCode=1
+| search CommandLine="*dir*/s*" OR CommandLine="*forfiles*" OR CommandLine="*Get-ChildItem*-Recurse*"
+| where match(CommandLine, "(?i)\.(doc|xls|pdf|ppt|txt|csv)")
+| stats count values(CommandLine) as commands by User, Computer
+| where count > 5

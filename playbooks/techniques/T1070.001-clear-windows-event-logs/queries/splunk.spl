@@ -1,0 +1,21 @@
+`comment("=== PB-T1070-001 - Windows Event Log Clearing Detection ===")`
+`comment("MITRE ATT&CK: T1070.001 - defense-evasion")`
+
+`comment("Event Log Cleared")`
+index=windows sourcetype=WinEventLog:Security EventCode=1102
+| table _time, ComputerName, SubjectUserName, SubjectDomainName
+
+`comment("wevtutil Clear Log Command")`
+index=sysmon EventCode=1 Image="*\wevtutil.exe"
+| where CommandLine LIKE "%cl %" OR CommandLine LIKE "%clear-log%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("PowerShell Clear-EventLog")`
+index=sysmon EventCode=1 (Image="*\powershell.exe" OR Image="*\pwsh.exe")
+| where CommandLine LIKE "%Clear-EventLog%" OR CommandLine LIKE "%Remove-EventLog%"
+| table _time, ComputerName, User, CommandLine
+
+`comment("Multiple Log Sources Cleared")`
+index=windows sourcetype=WinEventLog:System EventCode=104
+| stats count by ComputerName
+| where count > 3

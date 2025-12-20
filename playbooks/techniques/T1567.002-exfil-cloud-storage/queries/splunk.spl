@@ -1,0 +1,23 @@
+`comment("=== PB-T1567-002 - Exfiltration to Cloud Storage Detection ===")`
+`comment("MITRE ATT&CK: T1567.002 - exfiltration")`
+
+`comment("Large Upload to Cloud Storage")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler method=POST
+| where url LIKE "%dropbox.com/upload%" OR url LIKE "%drive.google.com/upload%" OR url LIKE "%onedrive.live.com/upload%" OR url LIKE "%mega.nz%"
+| stats sum(bytes_out) as upload_bytes by src_ip, user, dest_host
+| where upload_bytes > 50000000
+| table src_ip, user, dest_host, upload_bytes
+
+`comment("Off-Hours Cloud Uploads")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler method=POST
+| where url LIKE "%dropbox%" OR url LIKE "%drive.google%" OR url LIKE "%onedrive%"
+| eval hour=strftime(_time, "%H")
+| where hour < 6 OR hour > 22
+| table _time, src_ip, user, url, bytes_out
+
+`comment("First-Time Cloud Storage Usage")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler
+| where url LIKE "%dropbox%" OR url LIKE "%drive.google%" OR url LIKE "%onedrive%"
+| stats earliest(_time) as first_seen count by user, dest_host
+| where first_seen > relative_time(now(), "-7d")
+| table user, dest_host, first_seen, count

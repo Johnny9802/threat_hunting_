@@ -1,0 +1,13 @@
+// === PB-T1562-001 - Security Tools Disabled Detection ===
+// MITRE ATT&CK: T1562.001 - defense-evasion
+
+// Windows Defender disabled
+event.code:5001 AND winlog.provider_name:*Defender*
+
+// Security service stopped
+event.code:7036 AND message:*stopped* AND
+message:(*Defender* OR *McAfee* OR *Symantec* OR *CrowdStrike* OR *Carbon Black* OR *SentinelOne*)
+
+// Firewall disabled
+event.code:1 AND process.name:netsh.exe AND
+process.command_line:(*firewall* AND *off*)

@@ -1,0 +1,46 @@
+id: PB-T1567-002
+name: "Exfiltration to Cloud Storage Detection"
+description: "Detect data exfiltration to cloud storage services like Dropbox, Google Drive, OneDrive"
+
+mitre:
+  technique: T1567.002
+  tactic: exfiltration
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - Web Proxy Logs
+  - DLP Logs
+  - Network Traffic
+
+hunt_hypothesis: |
+  Cloud storage exfiltration:
+  1. Large uploads to personal cloud storage
+  2. Uploads during off-hours
+  3. Unusual file types being uploaded
+  4. First-time cloud storage usage
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Identify what files are being uploaded
+  - Check if cloud storage use is authorized
+  - Review user's normal cloud activity patterns
+  - Determine sensitivity of data
+
+false_positives:
+  - Legitimate cloud backup
+  - Collaboration activities
+  - Approved cloud storage
+
+references:
+  - https://attack.mitre.org/techniques/T1567/
+
+tags: [exfiltration, cloud-storage, data-loss]

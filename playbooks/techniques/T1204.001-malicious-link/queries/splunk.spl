@@ -1,0 +1,25 @@
+`comment("=== PB-T1204-001 - Malicious Link User Execution Detection ===")`
+`comment("MITRE ATT&CK: T1204.001 - execution")`
+
+`comment("Clicks to Recently Registered Domains")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler
+| rex field=url "https?://(?<domain>[^/]+)"
+| lookup domain_age domain OUTPUT registration_date
+| eval domain_age_days = (now() - strptime(registration_date, "%Y-%m-%d")) / 86400
+| where domain_age_days < 30
+| stats count by src_ip, user, domain, domain_age_days
+
+`comment("URL Shortener to Suspicious Destination")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler
+| where url LIKE "%bit.ly%" OR url LIKE "%tinyurl%" OR url LIKE "%t.co%" OR url LIKE "%goo.gl%"
+| rex field=final_url "https?://(?<final_domain>[^/]+)"
+| lookup threat_intel domain as final_domain OUTPUT threat_score
+| where threat_score > 50
+| stats count by src_ip, user, url, final_domain, threat_score
+
+`comment("Potential Credential Harvesting Page Access")`
+index=proxy sourcetype=bluecoat OR sourcetype=zscaler
+| where (url LIKE "%login%" OR url LIKE "%signin%" OR url LIKE "%password%") AND category="uncategorized"
+| rex field=url "https?://(?<domain>[^/]+)"
+| where NOT cidrmatch("10.0.0.0/8", domain) AND NOT domain LIKE "%microsoft%" AND NOT domain LIKE "%google%"
+| stats count values(url) as urls by src_ip, user, domain

@@ -1,8 +1,10 @@
 """Tests for AI assistant module."""
 
-import pytest
 import os
 from unittest.mock import Mock, patch
+
+import pytest
+
 from src.ai_assistant import AIAssistant
 from src.parser import PlaybookParser
 
@@ -28,8 +30,8 @@ class TestAIAssistant:
         assert len(info) > 0
 
     @pytest.mark.skipif(
-        not os.getenv('GROQ_API_KEY') and not os.getenv('OPENAI_API_KEY'),
-        reason="No AI API key configured"
+        not os.getenv("GROQ_API_KEY") and not os.getenv("OPENAI_API_KEY"),
+        reason="No AI API key configured",
     )
     def test_explain_playbook(self, ai):
         """Test explaining a playbook (requires API key)."""
@@ -37,7 +39,7 @@ class TestAIAssistant:
             pytest.skip("AI not available")
 
         parser = PlaybookParser()
-        playbook = parser.load_playbook('PB-T1566-001')
+        playbook = parser.load_playbook("PB-T1566-001")
 
         explanation = ai.explain_playbook(playbook)
 
@@ -45,8 +47,8 @@ class TestAIAssistant:
         assert len(explanation) > 100  # Should be a substantial explanation
 
     @pytest.mark.skipif(
-        not os.getenv('GROQ_API_KEY') and not os.getenv('OPENAI_API_KEY'),
-        reason="No AI API key configured"
+        not os.getenv("GROQ_API_KEY") and not os.getenv("OPENAI_API_KEY"),
+        reason="No AI API key configured",
     )
     def test_ask_question(self, ai):
         """Test asking a question (requires API key)."""
@@ -66,25 +68,28 @@ class TestAIAssistant:
             assert not ai.is_available()
 
             parser = PlaybookParser()
-            playbook = parser.load_playbook('PB-T1566-001')
+            playbook = parser.load_playbook("PB-T1566-001")
 
             with pytest.raises(RuntimeError):
                 ai.explain_playbook(playbook)
 
-    @patch('src.ai_assistant.OpenAI')
+    @patch("src.ai_assistant.OpenAI")
     def test_format_playbook_for_ai(self, mock_openai):
         """Test playbook formatting for AI context."""
         ai = AIAssistant()
         parser = PlaybookParser()
-        playbook = parser.load_playbook('PB-T1566-001')
+        playbook = parser.load_playbook("PB-T1566-001")
 
         formatted = ai._format_playbook_for_ai(playbook)
 
         assert isinstance(formatted, str)
-        assert playbook['id'] in formatted
-        assert playbook['name'] in formatted
-        assert 'Hunt Hypothesis' in formatted or playbook.get('hunt_hypothesis', '') in formatted
+        assert playbook["id"] in formatted
+        assert playbook["name"] in formatted
+        assert (
+            "Hunt Hypothesis" in formatted
+            or playbook.get("hunt_hypothesis", "") in formatted
+        )
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

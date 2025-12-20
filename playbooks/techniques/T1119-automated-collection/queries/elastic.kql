@@ -1,0 +1,2 @@
+(process.command_line:(*dir*/s* OR *forfiles* OR *Get-ChildItem*Recurse*) AND
+process.command_line:(*.doc* OR *.xls* OR *.pdf* OR *.ppt*))

@@ -1,0 +1,47 @@
+id: PB-T1133-001
+name: "External Remote Services Abuse Detection"
+description: "Detect abuse of external remote services like VPN, RDP, Citrix, and SSH for initial access"
+
+mitre:
+  technique: T1133
+  tactic: initial-access
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - VPN Logs
+  - Windows Security Events
+  - SSH Logs
+  - Citrix Logs
+
+hunt_hypothesis: |
+  Adversaries abuse legitimate remote access services:
+  1. VPN connections from unusual locations
+  2. RDP brute force and successful access
+  3. SSH access from unexpected sources
+  4. Citrix/Remote Desktop Gateway abuse
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Verify source IP reputation and geolocation
+  - Check if MFA was used/bypassed
+  - Review post-connection activity
+  - Check for lateral movement after access
+
+false_positives:
+  - Remote workers
+  - Third-party vendors
+  - IT support
+
+references:
+  - https://attack.mitre.org/techniques/T1133/
+
+tags: [initial-access, remote-access, vpn, rdp, ssh]

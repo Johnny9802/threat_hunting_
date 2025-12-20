@@ -1,0 +1,22 @@
+title: Scheduled Task Creation
+id: i1234567-schtask-create-001
+status: production
+level: medium
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\schtasks.exe'
+        CommandLine|contains: '/create'
+    suspicious_paths:
+        CommandLine|contains:
+            - '\AppData\'
+            - '\Temp\'
+            - '\ProgramData\'
+            - 'powershell'
+            - 'cmd.exe'
+    condition: selection and suspicious_paths
+tags:
+    - attack.persistence
+    - attack.t1053.005

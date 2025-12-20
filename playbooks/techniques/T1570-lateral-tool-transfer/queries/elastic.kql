@@ -1,0 +1,3 @@
+(winlog.event_id:11 AND file.path:(*ADMIN$* OR *C$*) AND
+file.extension:(exe OR dll OR ps1 OR bat)) OR
+(winlog.event_id:7045 AND winlog.event_data.ServiceName:(PSEXESVC OR csexec OR remcom))

@@ -1,0 +1,13 @@
+// === PB-T1071-004 - DNS Tunneling and C2 Detection ===
+// MITRE ATT&CK: T1071.004 - command-and-control
+
+// Long DNS queries
+dns.question.name:* AND length(dns.question.name) > 50
+
+// High volume DNS to single domain
+event.category:network AND network.protocol:dns
+| stats count() by source.ip, dns.question.registered_domain
+| where count > 500
+
+// TXT record queries
+dns.question.type:TXT

@@ -1,0 +1,4 @@
+dns.question.name:* AND
+(dns.question.name:*.xyz OR dns.question.name:*.top OR dns.question.name:*.click)
+| stats count() by dns.question.name, source.ip
+| where count > 5

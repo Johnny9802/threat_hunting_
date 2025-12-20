@@ -1,0 +1,12 @@
+// === PB-T1048-001 - Exfiltration Over Alternative Protocol Detection ===
+// MITRE ATT&CK: T1048 - exfiltration
+
+// Unusual outbound traffic on non-standard ports
+NOT destination.port:(80 OR 443 OR 53 OR 22 OR 3389)
+| stats sum(network.bytes) as total_bytes by source.ip, destination.ip, destination.port
+| where total_bytes > 100000000
+
+// Large ICMP traffic
+network.transport:icmp
+| stats sum(network.bytes) as bytes, count() as packets by source.ip, destination.ip
+| where bytes > 1000000

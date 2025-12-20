@@ -1,0 +1,46 @@
+id: PB-T1071-004
+name: "DNS Tunneling and C2 Detection"
+description: "Detect DNS-based command and control including tunneling and data exfiltration over DNS"
+
+mitre:
+  technique: T1071.004
+  tactic: command-and-control
+  subtechniques: []
+
+severity: high
+author: Threat Hunting Team
+created: 2024-01-15
+updated: 2025-12-20
+
+data_sources:
+  - DNS Logs
+  - Network Traffic
+  - Zeek/Bro Logs
+
+hunt_hypothesis: |
+  DNS C2 indicators:
+  1. Long DNS queries (>50 chars subdomain)
+  2. High volume of DNS to single domain
+  3. Unusual TXT record queries
+  4. Base32/Base64 encoded subdomains
+
+queries:
+  splunk: queries/splunk.spl
+  elastic: queries/elastic.kql
+  sigma: queries/sigma.yml
+
+investigation_steps:
+  - Analyze query patterns
+  - Check destination domain age and reputation
+  - Review query content for encoding
+  - Identify affected endpoints
+
+false_positives:
+  - CDN providers
+  - Anti-malware updates
+  - Legitimate SaaS
+
+references:
+  - https://attack.mitre.org/techniques/T1071/
+
+tags: [c2, dns, tunneling, exfiltration]

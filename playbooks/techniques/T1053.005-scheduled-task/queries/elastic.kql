@@ -1,0 +1,16 @@
+// === PB-T1053-005 - Malicious Scheduled Task Detection ===
+// MITRE ATT&CK: T1053.005 - persistence
+
+// Scheduled task creation
+event.code:1 AND process.name:schtasks.exe AND process.command_line:*/create*
+
+// Suspicious task executable paths
+event.code:1 AND process.name:schtasks.exe AND
+process.command_line:(*\AppData\* OR *\Temp\* OR *\ProgramData\*)
+
+// Encoded payloads in tasks
+event.code:1 AND process.name:schtasks.exe AND
+process.command_line:(*-enc* OR *base64* OR *FromBase64String*)
+
+// Task Scheduler events
+event.code:106 AND winlog.channel:"Microsoft-Windows-TaskScheduler/Operational" 

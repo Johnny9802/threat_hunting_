@@ -1,0 +1,3 @@
+(winlog.provider_name:"Microsoft-Windows-WMI-Activity" AND
+winlog.event_id:(5857 OR 5858 OR 5859 OR 5860 OR 5861)) OR
+(winlog.event_id:13 AND registry.path:*Image\ File\ Execution\ Options*)

@@ -1,0 +1,13 @@
+`comment("CreateRemoteThread Detection")`
+index=sysmon EventCode=8
+| search TargetImage IN ("*\svchost.exe", "*\explorer.exe", "*\lsass.exe", "*\services.exe")
+| where SourceImage!=TargetImage
+| eval suspicious=if(match(SourceImage, "(?i)(temp|appdata|downloads|public)"), 1, 0)
+| where suspicious=1
+| stats count by SourceImage, TargetImage, Computer
+
+`comment("Process Hollowing - Suspended Process")`
+index=sysmon EventCode=1
+| search ParentImage="*\cmd.exe" OR ParentImage="*\powershell.exe"
+| where Image IN ("*\svchost.exe", "*\dllhost.exe", "*\RuntimeBroker.exe")
+| stats count by ParentImage, Image, CommandLine, Computer

@@ -1,0 +1,26 @@
+title: Searching for Credentials in Files
+id: f7890123-0123-789a-bcde-01237890123f
+status: production
+level: high
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_findstr:
+        Image|endswith: '\findstr.exe'
+        CommandLine|contains:
+            - 'password'
+            - 'credential'
+            - 'secret'
+    selection_powershell:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+        CommandLine|contains: 'Select-String'
+        CommandLine|contains:
+            - 'password'
+            - 'credential'
+    condition: selection_findstr or selection_powershell
+tags:
+    - attack.credential_access
+    - attack.t1552

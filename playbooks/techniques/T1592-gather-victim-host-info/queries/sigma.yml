@@ -1,0 +1,16 @@
+title: Browser Fingerprinting Detection
+id: f1234567-abcd-1234-5678-abcdef123456
+status: production
+level: low
+logsource:
+    category: webserver
+detection:
+    selection:
+        cs-uri-stem|contains:
+            - 'fingerprint'
+            - 'canvas'
+            - 'webgl'
+    condition: selection
+tags:
+    - attack.reconnaissance
+    - attack.t1592

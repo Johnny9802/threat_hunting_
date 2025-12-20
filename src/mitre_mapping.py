@@ -2,7 +2,6 @@
 
 from typing import Dict, List, Optional
 
-
 # MITRE ATT&CK tactic to techniques mapping (subset for demonstration)
 TACTIC_TECHNIQUES: Dict[str, List[str]] = {
     "initial-access": ["T1566", "T1190", "T1133", "T1078"],
@@ -98,7 +97,7 @@ class MitreMapper:
         Returns:
             List of technique IDs
         """
-        tactic_normalized = tactic.lower().replace(' ', '-')
+        tactic_normalized = tactic.lower().replace(" ", "-")
         return self.tactics.get(tactic_normalized, [])
 
     def get_tactic_for_technique(self, technique_id: str) -> Optional[str]:
@@ -150,7 +149,7 @@ class MitreMapper:
             True if valid, False otherwise
         """
         # Basic format check
-        if not technique_id.startswith('T') or len(technique_id) < 5:
+        if not technique_id.startswith("T") or len(technique_id) < 5:
             return False
 
         # Check if it's in our database

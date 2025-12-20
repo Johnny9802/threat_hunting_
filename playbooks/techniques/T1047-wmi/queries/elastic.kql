@@ -1,0 +1,13 @@
+// === PB-T1047-001 - WMI Execution Detection ===
+// MITRE ATT&CK: T1047 - execution
+
+// Process spawned by WMI
+event.code:1 AND process.parent.name:WmiPrvSE.exe AND
+NOT process.name:WmiPrvSE.exe
+
+// WMIC process creation
+event.code:1 AND process.name:wmic.exe AND
+process.command_line:(*process* AND *call* AND *create*)
+
+// WMI Event Subscription
+event.code:(19 OR 20 OR 21)

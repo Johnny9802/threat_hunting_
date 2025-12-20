@@ -1,10 +1,12 @@
 """Playbook parser module for loading and validating YAML playbooks."""
 
 import os
+from datetime import date, datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-import yaml
+from typing import Any, Dict, List, Optional
+
 import jsonschema
+import yaml
 from jsonschema import validate
 
 
@@ -33,8 +35,29 @@ class PlaybookParser:
         if not self.schema_path.exists():
             return {}
 
-        with open(self.schema_path, 'r') as f:
+        with open(self.schema_path, "r") as f:
             return yaml.safe_load(f)
+
+    def _convert_dates_to_strings(self, data: Any) -> Any:
+        """Recursively convert date/datetime objects to ISO format strings.
+
+        Args:
+            data: The data structure to process
+
+        Returns:
+            The data with all date objects converted to strings
+        """
+        if isinstance(data, (date, datetime)):
+            return data.isoformat()
+        elif isinstance(data, dict):
+            return {
+                key: self._convert_dates_to_strings(value)
+                for key, value in data.items()
+            }
+        elif isinstance(data, list):
+            return [self._convert_dates_to_strings(item) for item in data]
+        else:
+            return data
 
     def load_playbook(self, playbook_id: str) -> Dict[str, Any]:
         """Load a specific playbook by ID.
@@ -60,8 +83,11 @@ class PlaybookParser:
             raise FileNotFoundError(f"Playbook {playbook_id} not found")
 
         # Load and parse YAML
-        with open(playbook_path, 'r') as f:
+        with open(playbook_path, "r") as f:
             playbook_data = yaml.safe_load(f)
+
+        # Convert date objects to strings for JSON schema validation
+        playbook_data = self._convert_dates_to_strings(playbook_data)
 
         # Validate against schema
         if self.schema:
@@ -84,31 +110,33 @@ class PlaybookParser:
                 playbook_file = technique_dir / "playbook.yaml"
                 if playbook_file.exists():
                     try:
-                        with open(playbook_file, 'r') as f:
+                        with open(playbook_file, "r") as f:
                             data = yaml.safe_load(f)
-                            if data.get('id') == playbook_id:
+                            if data.get("id") == playbook_id:
                                 return playbook_file
                     except Exception:
                         continue
         return None
 
-    def _load_queries(self, playbook_data: Dict[str, Any], playbook_dir: Path) -> Dict[str, Any]:
+    def _load_queries(
+        self, playbook_data: Dict[str, Any], playbook_dir: Path
+    ) -> Dict[str, Any]:
         """Load query files referenced in the playbook."""
-        if 'queries' not in playbook_data:
+        if "queries" not in playbook_data:
             return playbook_data
 
-        queries = playbook_data['queries']
+        queries = playbook_data["queries"]
         loaded_queries = {}
 
         for siem, query_path in queries.items():
             full_path = playbook_dir / query_path
             if full_path.exists():
-                with open(full_path, 'r') as f:
+                with open(full_path, "r") as f:
                     loaded_queries[siem] = f.read()
             else:
                 loaded_queries[siem] = f"# Query file not found: {query_path}"
 
-        playbook_data['queries_content'] = loaded_queries
+        playbook_data["queries_content"] = loaded_queries
         return playbook_data
 
     def list_all_playbooks(self) -> List[Dict[str, Any]]:
@@ -127,23 +155,27 @@ class PlaybookParser:
                 playbook_file = technique_dir / "playbook.yaml"
                 if playbook_file.exists():
                     try:
-                        with open(playbook_file, 'r') as f:
+                        with open(playbook_file, "r") as f:
                             data = yaml.safe_load(f)
+                            # Convert dates to strings
+                            data = self._convert_dates_to_strings(data)
                             # Add summary info
-                            playbooks.append({
-                                'id': data.get('id'),
-                                'name': data.get('name'),
-                                'description': data.get('description'),
-                                'technique': data.get('mitre', {}).get('technique'),
-                                'tactic': data.get('mitre', {}).get('tactic'),
-                                'severity': data.get('severity'),
-                                'tags': data.get('tags', []),
-                            })
+                            playbooks.append(
+                                {
+                                    "id": data.get("id"),
+                                    "name": data.get("name"),
+                                    "description": data.get("description"),
+                                    "technique": data.get("mitre", {}).get("technique"),
+                                    "tactic": data.get("mitre", {}).get("tactic"),
+                                    "severity": data.get("severity"),
+                                    "tags": data.get("tags", []),
+                                }
+                            )
                     except Exception as e:
                         # Skip invalid playbooks
                         continue
 
-        return sorted(playbooks, key=lambda x: x.get('id', ''))
+        return sorted(playbooks, key=lambda x: x.get("id", ""))
 
     def get_playbook_by_technique(self, technique_id: str) -> List[Dict[str, Any]]:
         """Get all playbooks for a specific MITRE technique.
@@ -155,7 +187,7 @@ class PlaybookParser:
             List of matching playbooks
         """
         all_playbooks = self.list_all_playbooks()
-        return [p for p in all_playbooks if p.get('technique') == technique_id]
+        return [p for p in all_playbooks if p.get("technique") == technique_id]
 
     def search_playbooks(
         self,
@@ -163,7 +195,7 @@ class PlaybookParser:
         technique: Optional[str] = None,
         tactic: Optional[str] = None,
         tag: Optional[str] = None,
-        severity: Optional[str] = None
+        severity: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Search playbooks by various criteria.
 
@@ -183,33 +215,33 @@ class PlaybookParser:
         if keyword:
             keyword_lower = keyword.lower()
             results = [
-                p for p in results
-                if keyword_lower in p.get('name', '').lower()
-                or keyword_lower in p.get('description', '').lower()
+                p
+                for p in results
+                if keyword_lower in p.get("name", "").lower()
+                or keyword_lower in p.get("description", "").lower()
             ]
 
         if technique:
-            results = [p for p in results if p.get('technique') == technique]
+            results = [p for p in results if p.get("technique") == technique]
 
         if tactic:
             tactic_lower = tactic.lower()
             results = [
-                p for p in results
-                if p.get('tactic', '').lower() == tactic_lower
+                p for p in results if p.get("tactic", "").lower() == tactic_lower
             ]
 
         if tag:
             tag_lower = tag.lower()
             results = [
-                p for p in results
-                if any(tag_lower == t.lower() for t in p.get('tags', []))
+                p
+                for p in results
+                if any(tag_lower == t.lower() for t in p.get("tags", []))
             ]
 
         if severity:
             severity_lower = severity.lower()
             results = [
-                p for p in results
-                if p.get('severity', '').lower() == severity_lower
+                p for p in results if p.get("severity", "").lower() == severity_lower
             ]
 
         return results
