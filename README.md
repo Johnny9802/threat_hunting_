@@ -3,6 +3,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI/CD](https://github.com/Johnny9802/threat_hunting_/actions/workflows/ci.yml/badge.svg)](https://github.com/Johnny9802/threat_hunting_/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://www.docker.com/)
 [![MITRE ATT&CK](https://img.shields.io/badge/MITRE-ATT%26CK-red.svg)](https://attack.mitre.org/)
 [![Powered by AI](https://img.shields.io/badge/Powered%20by-AI-green.svg)](https://groq.com/)
 
@@ -51,11 +52,33 @@ Each playbook includes:
 
 ## 🚀 Quick Start
 
-### Installation
+### Option 1: Docker (Recommended) 🐳
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/threat-hunting-playbook.git
+git clone https://github.com/Johnny9802/threat_hunting_.git
+cd threat-hunting-playbook
+
+# Configure (optional - for AI features)
+cp .env.example .env
+# Edit .env and add GROQ_API_KEY or OPENAI_API_KEY
+
+# Start all services
+./docker-run.sh up
+
+# Access the API
+open http://localhost:8000/docs
+```
+
+**That's it!** The API, database, and cache are now running.
+
+See [DOCKER.md](DOCKER.md) for full Docker documentation.
+
+### Option 2: Local Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Johnny9802/threat_hunting_.git
 cd threat-hunting-playbook
 
 # Create virtual environment
