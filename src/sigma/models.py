@@ -149,12 +149,107 @@ class SigmaSetting:
         }
 
 
+@dataclass
+class SysmonConfig:
+    """Sysmon configuration with enabled Event IDs and fields."""
+    id: Optional[int] = None
+    name: str = ""
+    version: str = ""
+    schema_version: str = ""
+    enabled_event_ids: str = ""  # JSON array of integers
+    disabled_event_ids: str = ""  # JSON array of integers
+    rules_json: str = ""  # JSON array of rule objects
+    raw_xml: Optional[str] = None  # Original XML content
+    is_active: bool = True
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def get_enabled_event_ids(self) -> List[int]:
+        if self.enabled_event_ids:
+            return json.loads(self.enabled_event_ids)
+        return []
+
+    def set_enabled_event_ids(self, ids: List[int]):
+        self.enabled_event_ids = json.dumps(ids)
+
+    def get_disabled_event_ids(self) -> List[int]:
+        if self.disabled_event_ids:
+            return json.loads(self.disabled_event_ids)
+        return []
+
+    def set_disabled_event_ids(self, ids: List[int]):
+        self.disabled_event_ids = json.dumps(ids)
+
+    def get_rules(self) -> List[Dict[str, Any]]:
+        if self.rules_json:
+            return json.loads(self.rules_json)
+        return []
+
+    def set_rules(self, rules: List[Dict[str, Any]]):
+        self.rules_json = json.dumps(rules)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "version": self.version,
+            "schema_version": self.schema_version,
+            "enabled_event_ids": self.get_enabled_event_ids(),
+            "disabled_event_ids": self.get_disabled_event_ids(),
+            "rules": self.get_rules(),
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+@dataclass
+class WindowsAuditConfig:
+    """Windows Audit Policy configuration."""
+    id: Optional[int] = None
+    name: str = ""
+    categories_json: str = ""  # JSON array of category objects
+    raw_content: Optional[str] = None  # Original audit policy content
+    is_active: bool = True
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    def get_categories(self) -> List[Dict[str, Any]]:
+        if self.categories_json:
+            return json.loads(self.categories_json)
+        return []
+
+    def set_categories(self, categories: List[Dict[str, Any]]):
+        self.categories_json = json.dumps(categories)
+
+    def get_enabled_subcategories(self) -> List[str]:
+        """Get list of enabled audit subcategories."""
+        enabled = []
+        for cat in self.get_categories():
+            for subcat in cat.get("subcategories", []):
+                if subcat.get("success") or subcat.get("failure"):
+                    enabled.append(subcat.get("name", ""))
+        return enabled
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "categories": self.get_categories(),
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 # Export all models
 __all__ = [
     "Profile",
     "FieldMapping",
     "SigmaConversion",
     "SigmaSetting",
+    "SysmonConfig",
+    "WindowsAuditConfig",
     "ConversionType",
     "MappingStatus",
 ]

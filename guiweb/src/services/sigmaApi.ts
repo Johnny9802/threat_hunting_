@@ -297,4 +297,124 @@ export const getSigmaLLMStatus = async () => {
   return response.data;
 };
 
+// ========== Sysmon Config ==========
+
+export interface SysmonConfigData {
+  id?: number;
+  name: string;
+  version: string;
+  schema_version: string;
+  enabled_event_ids: number[];
+  disabled_event_ids: number[];
+  rules: Array<{ eventId: number; name: string; enabled: boolean }>;
+  raw_xml?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const listSysmonConfigs = async (): Promise<SysmonConfigData[]> => {
+  const response = await api.get('/sigma/sysmon-configs');
+  return response.data;
+};
+
+export const createSysmonConfig = async (config: Partial<SysmonConfigData>): Promise<SysmonConfigData> => {
+  const response = await api.post('/sigma/sysmon-configs', config);
+  return response.data;
+};
+
+export const getActiveSysmonConfig = async (): Promise<{ available: boolean; config: SysmonConfigData | null }> => {
+  const response = await api.get('/sigma/sysmon-configs/active');
+  return response.data;
+};
+
+export const getSysmonConfig = async (id: number): Promise<SysmonConfigData> => {
+  const response = await api.get(`/sigma/sysmon-configs/${id}`);
+  return response.data;
+};
+
+export const activateSysmonConfig = async (id: number): Promise<{ message: string }> => {
+  const response = await api.put(`/sigma/sysmon-configs/${id}/activate`);
+  return response.data;
+};
+
+export const deleteSysmonConfig = async (id: number): Promise<{ message: string }> => {
+  const response = await api.delete(`/sigma/sysmon-configs/${id}`);
+  return response.data;
+};
+
+// ========== Windows Audit Config ==========
+
+export interface AuditConfigData {
+  id?: number;
+  name: string;
+  categories: Array<{
+    name: string;
+    subcategories: Array<{ name: string; success: boolean; failure: boolean }>;
+  }>;
+  raw_content?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const listAuditConfigs = async (): Promise<AuditConfigData[]> => {
+  const response = await api.get('/sigma/audit-configs');
+  return response.data;
+};
+
+export const createAuditConfig = async (config: Partial<AuditConfigData>): Promise<AuditConfigData> => {
+  const response = await api.post('/sigma/audit-configs', config);
+  return response.data;
+};
+
+export const getActiveAuditConfig = async (): Promise<{ available: boolean; config: AuditConfigData | null }> => {
+  const response = await api.get('/sigma/audit-configs/active');
+  return response.data;
+};
+
+export const getAuditConfig = async (id: number): Promise<AuditConfigData> => {
+  const response = await api.get(`/sigma/audit-configs/${id}`);
+  return response.data;
+};
+
+export const activateAuditConfig = async (id: number): Promise<{ message: string }> => {
+  const response = await api.put(`/sigma/audit-configs/${id}/activate`);
+  return response.data;
+};
+
+export const deleteAuditConfig = async (id: number): Promise<{ message: string }> => {
+  const response = await api.delete(`/sigma/audit-configs/${id}`);
+  return response.data;
+};
+
+// ========== Log Coverage Check ==========
+
+export interface CoverageCheckResult {
+  sysmon_coverage: {
+    available: boolean;
+    enabled_ids: number[];
+    missing_ids: number[];
+    covered: boolean;
+  };
+  audit_coverage: {
+    available: boolean;
+    enabled_policies: string[];
+    covered: boolean;
+  };
+  overall_covered: boolean;
+  recommendations: string[];
+}
+
+export const checkLogCoverage = async (
+  eventIds: number[],
+  category?: string
+): Promise<CoverageCheckResult> => {
+  const response = await api.post('/sigma/check-coverage', {
+    event_ids: eventIds,
+    category,
+  });
+  return response.data;
+};
+
 export default api;

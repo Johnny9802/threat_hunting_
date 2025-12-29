@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Settings,
@@ -28,8 +28,18 @@ import {
   addMapping,
   bulkUpdateMappings,
   deleteMapping,
+  createSysmonConfig,
+  getActiveSysmonConfig,
+  listSysmonConfigs,
+  deleteSysmonConfig,
+  createAuditConfig,
+  getActiveAuditConfig,
+  listAuditConfigs,
+  deleteAuditConfig,
   type SigmaProfile,
   type FieldMapping,
+  type SysmonConfigData,
+  type AuditConfigData,
 } from '../services/sigmaApi';
 
 interface SysmonConfig {
@@ -69,6 +79,53 @@ export default function SigmaMappings() {
   const [auditPolicy, setAuditPolicy] = useState<WindowsAuditPolicy | null>(null);
   const [gapAnalysis, setGapAnalysis] = useState<GapAnalysisResult | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  // Fetch saved Sysmon configs
+  const { data: savedSysmonConfigs = [], refetch: refetchSysmonConfigs } = useQuery({
+    queryKey: ['sysmon-configs'],
+    queryFn: listSysmonConfigs,
+  });
+
+  // Fetch active Sysmon config
+  const { data: activeSysmonData } = useQuery({
+    queryKey: ['active-sysmon-config'],
+    queryFn: getActiveSysmonConfig,
+  });
+
+  // Fetch saved Audit configs
+  const { data: savedAuditConfigs = [], refetch: refetchAuditConfigs } = useQuery({
+    queryKey: ['audit-configs'],
+    queryFn: listAuditConfigs,
+  });
+
+  // Fetch active Audit config
+  const { data: activeAuditData } = useQuery({
+    queryKey: ['active-audit-config'],
+    queryFn: getActiveAuditConfig,
+  });
+
+  // Load active configs on mount
+  useEffect(() => {
+    if (activeSysmonData?.available && activeSysmonData.config) {
+      const cfg = activeSysmonData.config;
+      setSysmonConfig({
+        version: cfg.version,
+        schemaVersion: cfg.schema_version,
+        enabledEventIds: cfg.enabled_event_ids,
+        disabledEventIds: cfg.disabled_event_ids,
+        rules: cfg.rules,
+      });
+    }
+  }, [activeSysmonData]);
+
+  useEffect(() => {
+    if (activeAuditData?.available && activeAuditData.config) {
+      setAuditPolicy({
+        categories: activeAuditData.config.categories,
+      });
+    }
+  }, [activeAuditData]);
 
   // Fetch profiles
   const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
@@ -203,11 +260,29 @@ export default function SigmaMappings() {
         // Check each rule type
         Object.entries(eventIdMap).forEach(([idStr, name]) => {
           const id = parseInt(idStr);
-          const ruleNode = eventFiltering.querySelector(name);
+          // Search for the rule node using getElementsByTagName (more compatible)
+          const ruleNodes = doc.getElementsByTagName(name);
+          let ruleNode: Element | null = null;
+
+          // Find the first rule node that's inside EventFiltering
+          for (let i = 0; i < ruleNodes.length; i++) {
+            const node = ruleNodes[i];
+            // Check if this node is a descendant of EventFiltering
+            let parent = node.parentElement;
+            while (parent) {
+              if (parent.tagName === 'EventFiltering') {
+                ruleNode = node;
+                break;
+              }
+              parent = parent.parentElement;
+            }
+            if (ruleNode) break;
+          }
 
           if (ruleNode) {
             const onMatch = ruleNode.getAttribute('onmatch');
-            const enabled = onMatch !== 'exclude' || ruleNode.children.length > 0;
+            // If onmatch="include" or has child rules, it's enabled
+            const enabled = onMatch === 'include' || (onMatch !== 'exclude') || ruleNode.children.length > 0;
             config.rules.push({ eventId: id, name, enabled });
             if (enabled) {
               config.enabledEventIds.push(id);
@@ -296,43 +371,81 @@ export default function SigmaMappings() {
   };
 
   // Handle file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'sysmon' | 'audit') => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'sysmon' | 'audit') => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setUploadError(null);
+    setSavingConfig(true);
+
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const content = e.target?.result as string;
 
-      if (type === 'sysmon') {
-        const config = parseSysmonConfig(content);
-        if (config) {
-          setSysmonConfig(config);
-          // Re-run gap analysis if we have both configs
-          if (auditPolicy) {
-            runGapAnalysis(config, auditPolicy);
+      try {
+        if (type === 'sysmon') {
+          const config = parseSysmonConfig(content);
+          if (config) {
+            // Save to backend
+            await createSysmonConfig({
+              name: file.name.replace(/\.(xml|yml|yaml)$/i, ''),
+              version: config.version,
+              schema_version: config.schemaVersion,
+              enabled_event_ids: config.enabledEventIds,
+              disabled_event_ids: config.disabledEventIds,
+              rules: config.rules,
+              raw_xml: content,
+              is_active: true,
+            });
+
+            setSysmonConfig(config);
+            // Refresh queries
+            queryClient.invalidateQueries({ queryKey: ['sysmon-configs'] });
+            queryClient.invalidateQueries({ queryKey: ['active-sysmon-config'] });
+
+            // Re-run gap analysis if we have both configs
+            if (auditPolicy) {
+              runGapAnalysis(config, auditPolicy);
+            }
+          } else {
+            setUploadError('Failed to parse Sysmon configuration. Please ensure it\'s a valid XML file.');
           }
         } else {
-          setUploadError('Failed to parse Sysmon configuration. Please ensure it\'s a valid XML file.');
-        }
-      } else {
-        const policy = parseAuditPolicy(content);
-        if (policy) {
-          setAuditPolicy(policy);
-          // Re-run gap analysis if we have both configs
-          if (sysmonConfig) {
-            runGapAnalysis(sysmonConfig, policy);
+          const policy = parseAuditPolicy(content);
+          if (policy) {
+            // Save to backend
+            await createAuditConfig({
+              name: file.name.replace(/\.(txt|csv)$/i, '') || 'Audit Policy',
+              categories: policy.categories,
+              raw_content: content,
+              is_active: true,
+            });
+
+            setAuditPolicy(policy);
+            // Refresh queries
+            queryClient.invalidateQueries({ queryKey: ['audit-configs'] });
+            queryClient.invalidateQueries({ queryKey: ['active-audit-config'] });
+
+            // Re-run gap analysis if we have both configs
+            if (sysmonConfig) {
+              runGapAnalysis(sysmonConfig, policy);
+            }
+          } else {
+            setUploadError('Failed to parse audit policy. Please use output from "auditpol /get /category:*" or a CSV export.');
           }
-        } else {
-          setUploadError('Failed to parse audit policy. Please use output from "auditpol /get /category:*" or a CSV export.');
         }
+      } catch (err) {
+        console.error('Error saving config:', err);
+        setUploadError('Failed to save configuration to server.');
+      } finally {
+        setSavingConfig(false);
       }
     };
 
     reader.onerror = () => {
       setUploadError('Failed to read file');
+      setSavingConfig(false);
     };
 
     reader.readAsText(file);

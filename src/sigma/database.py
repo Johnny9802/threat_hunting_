@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from contextlib import contextmanager
 
-from .models import Profile, FieldMapping, SigmaConversion, SigmaSetting, ConversionType, MappingStatus
+from .models import Profile, FieldMapping, SigmaConversion, SigmaSetting, SysmonConfig, WindowsAuditConfig, ConversionType, MappingStatus
 from .config import sigma_settings
 
 
@@ -83,6 +83,36 @@ class SigmaDatabase:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     key TEXT UNIQUE NOT NULL,
                     value TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Sysmon configurations table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sysmon_configs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    version TEXT,
+                    schema_version TEXT,
+                    enabled_event_ids TEXT,
+                    disabled_event_ids TEXT,
+                    rules_json TEXT,
+                    raw_xml TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Windows Audit configurations table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS windows_audit_configs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    categories_json TEXT,
+                    raw_content TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -474,6 +504,228 @@ class SigmaDatabase:
             llm_used=bool(row["llm_used"]),
             created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
         )
+
+    def _row_to_sysmon_config(self, row: sqlite3.Row) -> SysmonConfig:
+        """Convert database row to SysmonConfig object."""
+        return SysmonConfig(
+            id=row["id"],
+            name=row["name"],
+            version=row["version"],
+            schema_version=row["schema_version"],
+            enabled_event_ids=row["enabled_event_ids"],
+            disabled_event_ids=row["disabled_event_ids"],
+            rules_json=row["rules_json"],
+            raw_xml=row["raw_xml"],
+            is_active=bool(row["is_active"]),
+            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
+        )
+
+    def _row_to_audit_config(self, row: sqlite3.Row) -> WindowsAuditConfig:
+        """Convert database row to WindowsAuditConfig object."""
+        return WindowsAuditConfig(
+            id=row["id"],
+            name=row["name"],
+            categories_json=row["categories_json"],
+            raw_content=row["raw_content"],
+            is_active=bool(row["is_active"]),
+            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
+        )
+
+    # ========== Sysmon Config Methods ==========
+
+    def save_sysmon_config(self, config: SysmonConfig) -> SysmonConfig:
+        """Save or update a Sysmon configuration."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            if config.id:
+                cursor.execute("""
+                    UPDATE sysmon_configs SET
+                        name = ?, version = ?, schema_version = ?,
+                        enabled_event_ids = ?, disabled_event_ids = ?,
+                        rules_json = ?, raw_xml = ?, is_active = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (
+                    config.name, config.version, config.schema_version,
+                    config.enabled_event_ids, config.disabled_event_ids,
+                    config.rules_json, config.raw_xml, 1 if config.is_active else 0,
+                    config.id
+                ))
+            else:
+                cursor.execute("""
+                    INSERT INTO sysmon_configs
+                    (name, version, schema_version, enabled_event_ids, disabled_event_ids,
+                     rules_json, raw_xml, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    config.name, config.version, config.schema_version,
+                    config.enabled_event_ids, config.disabled_event_ids,
+                    config.rules_json, config.raw_xml, 1 if config.is_active else 0
+                ))
+                config.id = cursor.lastrowid
+            conn.commit()
+            return config
+
+    def get_sysmon_configs(self) -> List[SysmonConfig]:
+        """Get all Sysmon configurations."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM sysmon_configs ORDER BY created_at DESC")
+            return [self._row_to_sysmon_config(row) for row in cursor.fetchall()]
+
+    def get_sysmon_config(self, config_id: int) -> Optional[SysmonConfig]:
+        """Get a specific Sysmon configuration."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM sysmon_configs WHERE id = ?", (config_id,))
+            row = cursor.fetchone()
+            return self._row_to_sysmon_config(row) if row else None
+
+    def get_active_sysmon_config(self) -> Optional[SysmonConfig]:
+        """Get the currently active Sysmon configuration."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM sysmon_configs WHERE is_active = 1 ORDER BY updated_at DESC LIMIT 1")
+            row = cursor.fetchone()
+            return self._row_to_sysmon_config(row) if row else None
+
+    def set_active_sysmon_config(self, config_id: int) -> bool:
+        """Set a Sysmon configuration as active (deactivates others)."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE sysmon_configs SET is_active = 0")
+            cursor.execute("UPDATE sysmon_configs SET is_active = 1 WHERE id = ?", (config_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_sysmon_config(self, config_id: int) -> bool:
+        """Delete a Sysmon configuration."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM sysmon_configs WHERE id = ?", (config_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # ========== Windows Audit Config Methods ==========
+
+    def save_audit_config(self, config: WindowsAuditConfig) -> WindowsAuditConfig:
+        """Save or update a Windows Audit configuration."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            if config.id:
+                cursor.execute("""
+                    UPDATE windows_audit_configs SET
+                        name = ?, categories_json = ?, raw_content = ?,
+                        is_active = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (
+                    config.name, config.categories_json, config.raw_content,
+                    1 if config.is_active else 0, config.id
+                ))
+            else:
+                cursor.execute("""
+                    INSERT INTO windows_audit_configs
+                    (name, categories_json, raw_content, is_active)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    config.name, config.categories_json, config.raw_content,
+                    1 if config.is_active else 0
+                ))
+                config.id = cursor.lastrowid
+            conn.commit()
+            return config
+
+    def get_audit_configs(self) -> List[WindowsAuditConfig]:
+        """Get all Windows Audit configurations."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM windows_audit_configs ORDER BY created_at DESC")
+            return [self._row_to_audit_config(row) for row in cursor.fetchall()]
+
+    def get_audit_config(self, config_id: int) -> Optional[WindowsAuditConfig]:
+        """Get a specific Windows Audit configuration."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM windows_audit_configs WHERE id = ?", (config_id,))
+            row = cursor.fetchone()
+            return self._row_to_audit_config(row) if row else None
+
+    def get_active_audit_config(self) -> Optional[WindowsAuditConfig]:
+        """Get the currently active Windows Audit configuration."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM windows_audit_configs WHERE is_active = 1 ORDER BY updated_at DESC LIMIT 1")
+            row = cursor.fetchone()
+            return self._row_to_audit_config(row) if row else None
+
+    def set_active_audit_config(self, config_id: int) -> bool:
+        """Set a Windows Audit configuration as active (deactivates others)."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE windows_audit_configs SET is_active = 0")
+            cursor.execute("UPDATE windows_audit_configs SET is_active = 1 WHERE id = ?", (config_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def delete_audit_config(self, config_id: int) -> bool:
+        """Delete a Windows Audit configuration."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM windows_audit_configs WHERE id = ?", (config_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # ========== Log Coverage Check Methods ==========
+
+    def check_log_coverage(self, required_event_ids: List[int], required_category: str = None) -> Dict[str, Any]:
+        """
+        Check if the active Sysmon/Audit configs cover the required log sources.
+        Returns coverage status and gaps.
+        """
+        result = {
+            "sysmon_coverage": {"available": False, "enabled_ids": [], "missing_ids": [], "covered": False},
+            "audit_coverage": {"available": False, "enabled_policies": [], "covered": False},
+            "overall_covered": False,
+            "recommendations": []
+        }
+
+        # Check Sysmon coverage
+        sysmon_config = self.get_active_sysmon_config()
+        if sysmon_config:
+            result["sysmon_coverage"]["available"] = True
+            enabled_ids = sysmon_config.get_enabled_event_ids()
+            result["sysmon_coverage"]["enabled_ids"] = enabled_ids
+            missing_ids = [eid for eid in required_event_ids if eid not in enabled_ids]
+            result["sysmon_coverage"]["missing_ids"] = missing_ids
+            result["sysmon_coverage"]["covered"] = len(missing_ids) == 0
+
+            if missing_ids:
+                result["recommendations"].append(
+                    f"Enable Sysmon Event IDs: {', '.join(map(str, missing_ids))}"
+                )
+
+        # Check Audit Policy coverage
+        audit_config = self.get_active_audit_config()
+        if audit_config:
+            result["audit_coverage"]["available"] = True
+            result["audit_coverage"]["enabled_policies"] = audit_config.get_enabled_subcategories()
+            # For now, just mark as covered if audit config exists
+            result["audit_coverage"]["covered"] = True
+
+        # Overall coverage
+        result["overall_covered"] = (
+            result["sysmon_coverage"]["covered"] or
+            (result["audit_coverage"]["available"] and not required_event_ids)
+        )
+
+        if not sysmon_config and not audit_config:
+            result["recommendations"].append(
+                "No Sysmon or Windows Audit configuration uploaded. Upload your configs to enable coverage checking."
+            )
+
+        return result
 
 
 # Singleton instance

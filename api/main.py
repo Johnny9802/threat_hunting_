@@ -1,6 +1,6 @@
 """FastAPI REST API for Threat Hunting Playbook."""
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict, Any
@@ -1022,7 +1022,7 @@ try:
         PrerequisiteInfo,
     )
     from src.sigma.database import sigma_db
-    from src.sigma.models import SigmaConversion, ConversionType, FieldMapping, MappingStatus
+    from src.sigma.models import SigmaConversion, ConversionType, FieldMapping, MappingStatus, SysmonConfig, WindowsAuditConfig
     SIGMA_AVAILABLE = True
 except ImportError as e:
     print(f"Sigma Translator module not available: {e}")
@@ -1460,6 +1460,124 @@ if SIGMA_AVAILABLE:
             "provider": llm_service.provider,
             "model": llm_service.model,
         }
+
+    # ========== Sysmon Config Endpoints ==========
+
+    @app.get("/api/sigma/sysmon-configs")
+    async def list_sysmon_configs() -> List[Dict[str, Any]]:
+        """Get all Sysmon configurations."""
+        configs = sigma_db.get_sysmon_configs()
+        return [c.to_dict() for c in configs]
+
+    @app.post("/api/sigma/sysmon-configs")
+    async def create_sysmon_config(request: Request) -> Dict[str, Any]:
+        """Create a new Sysmon configuration."""
+        data = await request.json()
+        config = SysmonConfig(
+            name=data.get("name", "Uploaded Config"),
+            version=data.get("version", ""),
+            schema_version=data.get("schema_version", ""),
+            is_active=data.get("is_active", True),
+        )
+        config.set_enabled_event_ids(data.get("enabled_event_ids", []))
+        config.set_disabled_event_ids(data.get("disabled_event_ids", []))
+        config.set_rules(data.get("rules", []))
+        config.raw_xml = data.get("raw_xml")
+
+        saved = sigma_db.save_sysmon_config(config)
+        return saved.to_dict()
+
+    @app.get("/api/sigma/sysmon-configs/active")
+    async def get_active_sysmon_config() -> Dict[str, Any]:
+        """Get the currently active Sysmon configuration."""
+        config = sigma_db.get_active_sysmon_config()
+        if not config:
+            return {"available": False, "config": None}
+        return {"available": True, "config": config.to_dict()}
+
+    @app.get("/api/sigma/sysmon-configs/{config_id}")
+    async def get_sysmon_config(config_id: int) -> Dict[str, Any]:
+        """Get a specific Sysmon configuration."""
+        config = sigma_db.get_sysmon_config(config_id)
+        if not config:
+            raise HTTPException(status_code=404, detail="Configuration not found")
+        return config.to_dict()
+
+    @app.put("/api/sigma/sysmon-configs/{config_id}/activate")
+    async def activate_sysmon_config(config_id: int) -> Dict[str, str]:
+        """Set a Sysmon configuration as active."""
+        if sigma_db.set_active_sysmon_config(config_id):
+            return {"message": "Configuration activated successfully"}
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    @app.delete("/api/sigma/sysmon-configs/{config_id}")
+    async def delete_sysmon_config(config_id: int) -> Dict[str, str]:
+        """Delete a Sysmon configuration."""
+        if sigma_db.delete_sysmon_config(config_id):
+            return {"message": "Configuration deleted successfully"}
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    # ========== Windows Audit Config Endpoints ==========
+
+    @app.get("/api/sigma/audit-configs")
+    async def list_audit_configs() -> List[Dict[str, Any]]:
+        """Get all Windows Audit configurations."""
+        configs = sigma_db.get_audit_configs()
+        return [c.to_dict() for c in configs]
+
+    @app.post("/api/sigma/audit-configs")
+    async def create_audit_config(request: Request) -> Dict[str, Any]:
+        """Create a new Windows Audit configuration."""
+        data = await request.json()
+        config = WindowsAuditConfig(
+            name=data.get("name", "Uploaded Audit Policy"),
+            is_active=data.get("is_active", True),
+            raw_content=data.get("raw_content"),
+        )
+        config.set_categories(data.get("categories", []))
+
+        saved = sigma_db.save_audit_config(config)
+        return saved.to_dict()
+
+    @app.get("/api/sigma/audit-configs/active")
+    async def get_active_audit_config() -> Dict[str, Any]:
+        """Get the currently active Windows Audit configuration."""
+        config = sigma_db.get_active_audit_config()
+        if not config:
+            return {"available": False, "config": None}
+        return {"available": True, "config": config.to_dict()}
+
+    @app.get("/api/sigma/audit-configs/{config_id}")
+    async def get_audit_config(config_id: int) -> Dict[str, Any]:
+        """Get a specific Windows Audit configuration."""
+        config = sigma_db.get_audit_config(config_id)
+        if not config:
+            raise HTTPException(status_code=404, detail="Configuration not found")
+        return config.to_dict()
+
+    @app.put("/api/sigma/audit-configs/{config_id}/activate")
+    async def activate_audit_config(config_id: int) -> Dict[str, str]:
+        """Set a Windows Audit configuration as active."""
+        if sigma_db.set_active_audit_config(config_id):
+            return {"message": "Configuration activated successfully"}
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    @app.delete("/api/sigma/audit-configs/{config_id}")
+    async def delete_audit_config(config_id: int) -> Dict[str, str]:
+        """Delete a Windows Audit configuration."""
+        if sigma_db.delete_audit_config(config_id):
+            return {"message": "Configuration deleted successfully"}
+        raise HTTPException(status_code=404, detail="Configuration not found")
+
+    # ========== Log Coverage Check Endpoint ==========
+
+    @app.post("/api/sigma/check-coverage")
+    async def check_log_coverage(request: Request) -> Dict[str, Any]:
+        """Check if the active configs cover the required log sources for a detection."""
+        data = await request.json()
+        required_event_ids = data.get("event_ids", [])
+        required_category = data.get("category")
+        return sigma_db.check_log_coverage(required_event_ids, required_category)
 
 
 if __name__ == "__main__":
