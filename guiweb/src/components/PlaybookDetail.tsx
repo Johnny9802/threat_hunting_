@@ -18,6 +18,7 @@ import {
   ListChecks,
   Search,
   Lightbulb,
+  Info,
 } from 'lucide-react';
 import { usePlaybook } from '../hooks/usePlaybooks';
 import { cn, getSeverityBadgeColor, formatDate, copyToClipboard, downloadText } from '../lib/utils';

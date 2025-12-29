@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Send, Loader2, Sparkles, AlertCircle, CheckCircle, MessageSquare } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, AlertCircle, MessageSquare } from 'lucide-react';
 import api from '../services/api';
 
 interface AIAssistantProps {

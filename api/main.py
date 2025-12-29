@@ -67,7 +67,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
     allow_credentials=False,  # Set to False for public API; only True if authentication needed
-    allow_methods=["GET", "POST"],  # Restrict to only necessary methods
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],  # All needed methods for CRUD
     allow_headers=["Content-Type", "Authorization"],  # Only necessary headers
 )
 
@@ -995,6 +995,471 @@ async def get_ai_status() -> Dict[str, Any]:
         "groq_configured": bool(os.environ.get('GROQ_API_KEY')),
         "openai_configured": bool(os.environ.get('OPENAI_API_KEY'))
     }
+
+
+# ============================================================================
+# SIGMA TRANSLATOR ENDPOINTS
+# ============================================================================
+
+# Import Sigma Translator components
+try:
+    from src.sigma import (
+        sigma_service,
+        converter_service,
+        llm_service,
+        ConvertSigmaRequest,
+        ConvertSPLRequest,
+        DescribeRequest,
+        ConversionResponse,
+        ProfileCreate,
+        ProfileUpdate,
+        ProfileResponse,
+        FieldMappingCreate,
+        FieldMappingUpdate,
+        FieldMappingResponse,
+        BulkMappingImport,
+        MappingStatusEnum,
+        PrerequisiteInfo,
+    )
+    from src.sigma.database import sigma_db
+    from src.sigma.models import SigmaConversion, ConversionType, FieldMapping, MappingStatus
+    SIGMA_AVAILABLE = True
+except ImportError as e:
+    print(f"Sigma Translator module not available: {e}")
+    SIGMA_AVAILABLE = False
+
+
+if SIGMA_AVAILABLE:
+    # Sigma Repository endpoints
+    @app.get("/api/sigma/repo")
+    async def get_sigma_repo_status() -> Dict[str, Any]:
+        """Get Sigma repository status and statistics."""
+        return sigma_service.get_repo_stats()
+
+    @app.get("/api/sigma/rules")
+    async def list_sigma_rules(
+        search: Optional[str] = None,
+        product: Optional[str] = None,
+        service: Optional[str] = None,
+        category: Optional[str] = None,
+        limit: int = Query(50, ge=1, le=200),
+        offset: int = Query(0, ge=0)
+    ) -> Dict[str, Any]:
+        """List Sigma rules from repository with filtering."""
+        rules, total = sigma_service.list_rules(
+            search=search,
+            product=product,
+            service=service,
+            category=category,
+            limit=limit,
+            offset=offset
+        )
+        return {
+            "rules": rules,
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        }
+
+    @app.get("/api/sigma/rules/{path:path}")
+    async def get_sigma_rule(path: str) -> Dict[str, Any]:
+        """Get content of a specific Sigma rule."""
+        result = sigma_service.get_rule_content(path)
+        if not result:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        return result
+
+    @app.get("/api/sigma/filters")
+    async def get_sigma_filters() -> Dict[str, List[str]]:
+        """Get available filter options from the repository."""
+        return sigma_service.get_filters()
+
+    class ValidateSigmaRequest(BaseModel):
+        yaml_content: str = Field(..., description="YAML content to validate")
+
+    @app.post("/api/sigma/validate")
+    async def validate_sigma_yaml(request: ValidateSigmaRequest) -> Dict[str, Any]:
+        """Validate Sigma YAML content."""
+        rule, error = sigma_service.parse_yaml(request.yaml_content)
+        if error:
+            return {"valid": False, "error": error}
+        return {
+            "valid": True,
+            "title": rule.get("title"),
+            "fields": sigma_service.extract_fields(rule),
+            "logsource": sigma_service.get_logsource_info(rule)
+        }
+
+    # Conversion endpoints
+    @app.post("/api/sigma/convert/sigma-to-spl")
+    async def convert_sigma_to_spl(request: ConvertSigmaRequest) -> Dict[str, Any]:
+        """Convert Sigma YAML to Splunk SPL query."""
+        # Parse and validate YAML
+        rule, error = sigma_service.parse_yaml(request.sigma_yaml)
+        if error:
+            raise HTTPException(status_code=400, detail=error)
+
+        # Get profile and mappings
+        custom_mappings = {}
+        profile_name = "Default"
+        use_cim = False
+        index_override = request.index_override
+        sourcetype_override = request.sourcetype_override
+
+        if request.profile_id:
+            profile = sigma_db.get_profile(request.profile_id)
+            if profile:
+                profile_name = profile.name
+                use_cim = request.cim_override if request.cim_override is not None else profile.cim_enabled
+                if not index_override:
+                    index_override = profile.index_name if profile.index_name != "*" else None
+                custom_mappings = sigma_db.get_mappings_dict(profile.id)
+
+        # Perform conversion
+        spl, mappings, prerequisites, gaps, health_checks = converter_service.convert_sigma_to_spl(
+            rule=rule,
+            custom_mappings=custom_mappings,
+            use_cim=use_cim,
+            index_override=index_override,
+            sourcetype_override=sourcetype_override,
+            time_range=request.time_range,
+        )
+
+        # Save to history
+        import json
+        conversion = SigmaConversion(
+            name=rule.get("title", "Untitled Rule"),
+            conversion_type=ConversionType.SIGMA_TO_SPL,
+            profile_id=request.profile_id,
+            input_content=request.sigma_yaml,
+            output_spl=spl,
+            prerequisites=json.dumps(prerequisites.model_dump()),
+            gap_analysis=json.dumps([g.model_dump() for g in gaps]),
+            health_checks=json.dumps([h.model_dump() for h in health_checks]),
+            llm_used=False,
+        )
+        sigma_db.save_conversion(conversion)
+
+        return {
+            "id": conversion.id,
+            "name": conversion.name,
+            "spl": spl,
+            "sigma_yaml": request.sigma_yaml,
+            "prerequisites": prerequisites.model_dump(),
+            "mappings": [m.model_dump() for m in mappings],
+            "gaps": [g.model_dump() for g in gaps],
+            "health_checks": [h.model_dump() for h in health_checks],
+            "llm_used": False,
+        }
+
+    @app.post("/api/sigma/convert/spl-to-sigma")
+    async def convert_spl_to_sigma(request: ConvertSPLRequest) -> Dict[str, Any]:
+        """Convert Splunk SPL query to Sigma YAML (best effort)."""
+        if not request.spl_query.strip():
+            raise HTTPException(status_code=400, detail="SPL query cannot be empty")
+
+        # Basic reverse conversion
+        sigma_yaml, correlation_notes = converter_service.reverse_spl_to_sigma(
+            spl=request.spl_query,
+            title=request.title,
+            level=request.level,
+            status=request.status,
+            author=request.author,
+            description=request.description,
+        )
+
+        # Try to enhance with LLM if available
+        if llm_service.is_available:
+            enhanced_sigma, improvements = llm_service.enhance_spl_reverse(
+                spl=request.spl_query,
+                current_sigma=sigma_yaml,
+            )
+            if enhanced_sigma:
+                sigma_yaml = enhanced_sigma
+                if improvements:
+                    correlation_notes = (correlation_notes or "") + "\n\nLLM Improvements:\n" + "\n".join(
+                        f"- {i}" for i in improvements
+                    )
+
+        # Parse the generated sigma to get prerequisites
+        rule, _ = sigma_service.parse_yaml(sigma_yaml)
+        if rule:
+            _, mappings, prerequisites, gaps, health_checks = converter_service.convert_sigma_to_spl(
+                rule=rule,
+                custom_mappings={},
+                use_cim=False,
+            )
+        else:
+            prerequisites = PrerequisiteInfo(
+                log_source={},
+                event_ids=[],
+                channels=[],
+                configuration=[],
+            )
+            mappings = []
+            gaps = []
+            health_checks = []
+
+        # Save to history
+        import json
+        conversion = SigmaConversion(
+            name=request.title,
+            conversion_type=ConversionType.SPL_TO_SIGMA,
+            input_content=request.spl_query,
+            output_sigma=sigma_yaml,
+            output_spl=request.spl_query,
+            correlation_notes=correlation_notes,
+            llm_used=llm_service.is_available,
+        )
+        sigma_db.save_conversion(conversion)
+
+        return {
+            "id": conversion.id,
+            "name": request.title,
+            "spl": request.spl_query,
+            "sigma_yaml": sigma_yaml,
+            "prerequisites": prerequisites.model_dump() if hasattr(prerequisites, 'model_dump') else {},
+            "mappings": [m.model_dump() for m in mappings] if mappings else [],
+            "gaps": [g.model_dump() for g in gaps] if gaps else [],
+            "health_checks": [h.model_dump() for h in health_checks] if health_checks else [],
+            "correlation_notes": correlation_notes,
+            "llm_used": llm_service.is_available,
+        }
+
+    @app.post("/api/sigma/convert/describe")
+    async def generate_from_description(request: DescribeRequest) -> Dict[str, Any]:
+        """Generate Sigma rule and SPL from natural language description."""
+        if not llm_service.is_available:
+            raise HTTPException(
+                status_code=503,
+                detail="This feature requires LLM. Configure API keys in settings.",
+            )
+
+        # Generate detection
+        sigma_yaml, spl_query, assumptions = llm_service.generate_detection(
+            description=request.description,
+            log_source=request.log_source,
+            level=request.level,
+            include_false_positives=request.include_false_positives,
+            include_attack_techniques=request.include_attack_techniques,
+        )
+
+        if not sigma_yaml:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to generate detection. {assumptions[0] if assumptions else ''}",
+            )
+
+        # Parse generated sigma
+        rule, error = sigma_service.parse_yaml(sigma_yaml)
+        if error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Generated invalid Sigma: {error}",
+            )
+
+        # Get prerequisites and mappings
+        _, mappings, prerequisites, gaps, health_checks = converter_service.convert_sigma_to_spl(
+            rule=rule,
+            custom_mappings={},
+            use_cim=False,
+        )
+
+        # If SPL wasn't generated, convert from Sigma
+        if not spl_query:
+            spl_query, _, _, _, _ = converter_service.convert_sigma_to_spl(
+                rule=rule,
+                custom_mappings={},
+                use_cim=False,
+            )
+
+        # Format assumptions as notes
+        correlation_notes = None
+        if assumptions:
+            correlation_notes = "Assumptions Made:\n" + "\n".join(f"- {a}" for a in assumptions)
+
+        # Save to history
+        import json
+        conversion = SigmaConversion(
+            name=rule.get("title", "Generated Detection"),
+            conversion_type=ConversionType.TEXT_TO_SIGMA,
+            input_content=request.description,
+            output_sigma=sigma_yaml,
+            output_spl=spl_query,
+            correlation_notes=correlation_notes,
+            llm_used=True,
+        )
+        sigma_db.save_conversion(conversion)
+
+        return {
+            "id": conversion.id,
+            "name": conversion.name,
+            "spl": spl_query,
+            "sigma_yaml": sigma_yaml,
+            "prerequisites": prerequisites.model_dump(),
+            "mappings": [m.model_dump() for m in mappings],
+            "gaps": [g.model_dump() for g in gaps],
+            "health_checks": [h.model_dump() for h in health_checks],
+            "correlation_notes": correlation_notes,
+            "llm_used": True,
+        }
+
+    # Profile Management endpoints
+    @app.get("/api/sigma/profiles")
+    async def list_profiles() -> List[Dict[str, Any]]:
+        """List all Sigma profiles."""
+        profiles = sigma_db.get_profiles()
+        return [p.to_dict() for p in profiles]
+
+    @app.post("/api/sigma/profiles")
+    async def create_profile(request: ProfileCreate) -> Dict[str, Any]:
+        """Create a new Sigma profile."""
+        from src.sigma.models import Profile as ProfileModel
+        profile = ProfileModel(
+            name=request.name,
+            description=request.description,
+            index_name=request.index_name,
+            sourcetype=request.sourcetype,
+            cim_enabled=request.cim_enabled,
+        )
+        if request.macros:
+            profile.set_macros(request.macros)
+        created = sigma_db.create_profile(profile)
+        return created.to_dict()
+
+    @app.get("/api/sigma/profiles/{profile_id}")
+    async def get_profile(profile_id: int) -> Dict[str, Any]:
+        """Get a specific Sigma profile."""
+        profile = sigma_db.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        return profile.to_dict()
+
+    @app.patch("/api/sigma/profiles/{profile_id}")
+    async def update_profile(profile_id: int, request: ProfileUpdate) -> Dict[str, Any]:
+        """Update a Sigma profile."""
+        updates = request.model_dump(exclude_unset=True)
+        if 'macros' in updates and updates['macros'] is not None:
+            import json
+            updates['macros'] = json.dumps(updates['macros'])
+        profile = sigma_db.update_profile(profile_id, updates)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        return profile.to_dict()
+
+    @app.delete("/api/sigma/profiles/{profile_id}")
+    async def delete_profile(profile_id: int) -> Dict[str, str]:
+        """Delete a Sigma profile."""
+        if sigma_db.delete_profile(profile_id):
+            return {"message": "Profile deleted successfully"}
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    # Field Mapping endpoints
+    @app.get("/api/sigma/profiles/{profile_id}/mappings")
+    async def get_profile_mappings(profile_id: int) -> List[Dict[str, Any]]:
+        """Get all field mappings for a profile."""
+        mappings = sigma_db.get_mappings_for_profile(profile_id)
+        return [m.to_dict() for m in mappings]
+
+    @app.post("/api/sigma/profiles/{profile_id}/mappings")
+    async def create_mapping(profile_id: int, request: FieldMappingCreate) -> Dict[str, Any]:
+        """Create a new field mapping."""
+        mapping = FieldMapping(
+            profile_id=profile_id,
+            sigma_field=request.sigma_field,
+            target_field=request.target_field,
+            status=MappingStatus(request.status.value) if request.status else MappingStatus.OK,
+            category=request.category,
+            notes=request.notes,
+        )
+        created = sigma_db.create_mapping(mapping)
+        return created.to_dict()
+
+    @app.patch("/api/sigma/profiles/{profile_id}/mappings/{mapping_id}")
+    async def update_mapping(profile_id: int, mapping_id: int, request: FieldMappingUpdate) -> Dict[str, Any]:
+        """Update a field mapping."""
+        updates = request.model_dump(exclude_unset=True)
+        if 'status' in updates and updates['status']:
+            updates['status'] = updates['status'].value
+        mapping = sigma_db.update_mapping(mapping_id, updates)
+        if not mapping:
+            raise HTTPException(status_code=404, detail="Mapping not found")
+        return mapping.to_dict()
+
+    @app.delete("/api/sigma/profiles/{profile_id}/mappings/{mapping_id}")
+    async def delete_mapping(profile_id: int, mapping_id: int) -> Dict[str, str]:
+        """Delete a field mapping."""
+        if sigma_db.delete_mapping(mapping_id):
+            return {"message": "Mapping deleted successfully"}
+        raise HTTPException(status_code=404, detail="Mapping not found")
+
+    @app.post("/api/sigma/profiles/{profile_id}/mappings/bulk")
+    async def bulk_import_mappings(profile_id: int, request: BulkMappingImport) -> Dict[str, Any]:
+        """Bulk import field mappings for a profile."""
+        mappings = []
+        for m in request.mappings:
+            mapping = FieldMapping(
+                profile_id=profile_id,
+                sigma_field=m.sigma_field,
+                target_field=m.target_field,
+                status=MappingStatus(m.status.value) if m.status else MappingStatus.OK,
+                category=m.category,
+                notes=m.notes,
+            )
+            mappings.append(mapping)
+        count = sigma_db.bulk_import_mappings(profile_id, mappings)
+        return {"imported": count}
+
+    @app.post("/api/sigma/profiles/{profile_id}/mappings/suggest")
+    async def suggest_mappings(profile_id: int, fields: List[str]) -> Dict[str, str]:
+        """Get AI-suggested field mappings."""
+        suggestions = llm_service.suggest_mappings(fields)
+        return suggestions
+
+    # Conversion History endpoints
+    @app.get("/api/sigma/history")
+    async def get_conversion_history(
+        limit: int = Query(50, ge=1, le=200),
+        offset: int = Query(0, ge=0),
+        conversion_type: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Get conversion history."""
+        conversions = sigma_db.get_conversions(limit=limit, offset=offset, conversion_type=conversion_type)
+        return {
+            "conversions": [c.to_dict() for c in conversions],
+            "limit": limit,
+            "offset": offset
+        }
+
+    @app.get("/api/sigma/history/{conversion_id}")
+    async def get_conversion_detail(conversion_id: int) -> Dict[str, Any]:
+        """Get details of a specific conversion."""
+        conversion = sigma_db.get_conversion(conversion_id)
+        if not conversion:
+            raise HTTPException(status_code=404, detail="Conversion not found")
+        return conversion.to_dict()
+
+    @app.delete("/api/sigma/history/{conversion_id}")
+    async def delete_conversion(conversion_id: int) -> Dict[str, str]:
+        """Delete a conversion from history."""
+        if sigma_db.delete_conversion(conversion_id):
+            return {"message": "Conversion deleted successfully"}
+        raise HTTPException(status_code=404, detail="Conversion not found")
+
+    @app.get("/api/sigma/history/stats")
+    async def get_conversion_stats() -> Dict[str, Any]:
+        """Get conversion statistics."""
+        return sigma_db.get_conversion_stats()
+
+    # Sigma LLM Status
+    @app.get("/api/sigma/llm/status")
+    async def get_sigma_llm_status() -> Dict[str, Any]:
+        """Get Sigma Translator LLM status."""
+        return {
+            "available": llm_service.is_available,
+            "provider": llm_service.provider,
+            "model": llm_service.model,
+        }
 
 
 if __name__ == "__main__":

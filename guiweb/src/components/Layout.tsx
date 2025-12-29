@@ -11,6 +11,7 @@ import {
   Settings as SettingsIcon,
   Github,
   Sparkles,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import SearchModal from './SearchModal';
@@ -31,6 +32,8 @@ const navItems: NavItem[] = [
   { name: 'Playbooks', path: '/', icon: BookOpen },
   { name: 'Dashboard', path: '/dashboard', icon: Activity },
   { name: 'MITRE ATT&CK', path: '/mitre', icon: Shield },
+  { name: 'Sigma Translator', path: '/sigma', icon: ArrowRightLeft },
+  { name: 'Sigma Mappings', path: '/sigma/mappings', icon: SettingsIcon },
   { name: 'Post-Mortem', path: '/post-mortem', icon: BookOpen },
   { name: 'Settings', path: '/settings', icon: SettingsIcon },
 ];

@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { usePlaybooks } from '../hooks/usePlaybooks';
 import { cn, getSeverityBadgeColor, formatDate } from '../lib/utils';
-import type { Playbook } from '../types/playbook';
 
 type SortField = 'name' | 'severity' | 'created' | 'updated';
 type SortDirection = 'asc' | 'desc';
