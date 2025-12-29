@@ -74,6 +74,7 @@ COPY src/ ./src/
 COPY playbooks/ ./playbooks/
 COPY api/ ./api/
 COPY setup.py .
+COPY README.md .
 
 ENV PATH=/root/.local/bin:$PATH
 ENV PYTHONPATH=/app

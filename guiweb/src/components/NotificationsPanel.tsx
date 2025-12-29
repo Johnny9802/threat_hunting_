@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Bell, CheckCircle, AlertTriangle, Info, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -14,6 +14,7 @@ interface Notification {
 interface NotificationsPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  onUnreadCountChange?: (count: number) => void;
 }
 
 // Mock notifications for demonstration
@@ -44,10 +45,15 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
   },
 ];
 
-export default function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
+export default function NotificationsPanel({ isOpen, onClose, onUnreadCountChange }: NotificationsPanelProps) {
   const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Notify parent when unread count changes
+  useEffect(() => {
+    onUnreadCountChange?.(unreadCount);
+  }, [unreadCount, onUnreadCountChange]);
 
   const markAsRead = (id: string) => {
     setNotifications((prev) =>

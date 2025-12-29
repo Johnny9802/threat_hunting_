@@ -11,6 +11,8 @@ import {
   Settings as SettingsIcon,
   Github,
   Sparkles,
+  ArrowRightLeft,
+  Library,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import SearchModal from './SearchModal';
@@ -31,6 +33,9 @@ const navItems: NavItem[] = [
   { name: 'Playbooks', path: '/', icon: BookOpen },
   { name: 'Dashboard', path: '/dashboard', icon: Activity },
   { name: 'MITRE ATT&CK', path: '/mitre', icon: Shield },
+  { name: 'Sigma Translator', path: '/sigma', icon: ArrowRightLeft },
+  { name: 'Sigma Examples', path: '/sigma/examples', icon: Library },
+  { name: 'Sigma Mappings', path: '/sigma/mappings', icon: SettingsIcon },
   { name: 'Post-Mortem', path: '/post-mortem', icon: BookOpen },
   { name: 'Settings', path: '/settings', icon: SettingsIcon },
 ];
@@ -40,6 +45,7 @@ export default function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(2); // Initial unread count from mock data
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -90,7 +96,9 @@ export default function Layout({ children }: LayoutProps) {
               aria-label="Notifications"
             >
               <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
+              )}
             </button>
             <button
               onClick={() => setAiAssistantOpen(true)}
@@ -177,7 +185,11 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Modals & Panels */}
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+      <NotificationsPanel
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        onUnreadCountChange={setUnreadCount}
+      />
       <AIAssistant isOpen={aiAssistantOpen} onClose={() => setAiAssistantOpen(false)} />
     </div>
   );

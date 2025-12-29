@@ -8,13 +8,11 @@ import {
   AlertCircle,
   Users,
   Target,
-  TrendingUp,
-  Shield,
   Book,
   HelpCircle,
   X,
 } from 'lucide-react';
-import { cn, copyToClipboard, downloadText } from '../lib/utils';
+import { copyToClipboard, downloadText } from '../lib/utils';
 
 interface Template {
   id: string;

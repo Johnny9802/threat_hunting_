@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   Shield,
   Search,
-  Filter,
   ExternalLink,
   ChevronDown,
   ChevronRight,
@@ -14,7 +13,6 @@ import {
   Info,
 } from 'lucide-react';
 import { usePlaybooks } from '../hooks/usePlaybooks';
-import { cn } from '../lib/utils';
 
 // MITRE ATT&CK Enterprise Tactics (in order)
 const MITRE_TACTICS = [
@@ -91,7 +89,7 @@ export default function MitreMatrix() {
       return (
         techniqueId.toLowerCase().includes(query) ||
         playbooksForTechnique.some(
-          (pb) =>
+          (pb: { name: string; description: string }) =>
             pb.name.toLowerCase().includes(query) ||
             pb.description.toLowerCase().includes(query)
         )
@@ -270,7 +268,7 @@ export default function MitreMatrix() {
               {/* Techniques List */}
               {isExpanded && techniquesForTactic && (
                 <div className="border-t border-gray-800 bg-gray-950/50">
-                  {Array.from(techniquesForTactic)
+                  {(Array.from(techniquesForTactic) as string[])
                     .filter((techniqueId) => filteredTechniques.includes(techniqueId))
                     .map((techniqueId) => {
                       const playbooksForTechnique = techniqueMap.get(techniqueId) || [];
@@ -303,7 +301,7 @@ export default function MitreMatrix() {
                           {/* Playbooks */}
                           {isExpanded && (
                             <div className="bg-gray-900/50 px-6 py-2 space-y-2">
-                              {playbooksForTechnique.map((playbook) => (
+                              {playbooksForTechnique.map((playbook: { id: string; name: string; description: string }) => (
                                 <Link
                                   key={playbook.id}
                                   to={`/playbook/${playbook.id}`}
