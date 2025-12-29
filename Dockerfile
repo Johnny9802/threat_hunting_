@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Threat Hunting Playbook
 # Stage 1: Builder - Install dependencies
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
@@ -15,7 +15,7 @@ COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime - CLI Tool
-FROM python:3.11-slim as cli
+FROM python:3.11-slim AS cli
 
 LABEL maintainer="Threat Hunting Team"
 LABEL description="AI-powered threat hunting playbook CLI tool"
@@ -43,7 +43,7 @@ ENTRYPOINT ["hunt"]
 CMD ["--help"]
 
 # Stage 3: API Server
-FROM python:3.11-slim as api
+FROM python:3.11-slim AS api
 
 LABEL maintainer="Threat Hunting Team"
 LABEL description="Threat Hunting Playbook REST API"
