@@ -45,6 +45,7 @@ export default function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(2); // Initial unread count from mock data
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -95,7 +96,9 @@ export default function Layout({ children }: LayoutProps) {
               aria-label="Notifications"
             >
               <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
+              )}
             </button>
             <button
               onClick={() => setAiAssistantOpen(true)}
@@ -182,7 +185,11 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Modals & Panels */}
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+      <NotificationsPanel
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        onUnreadCountChange={setUnreadCount}
+      />
       <AIAssistant isOpen={aiAssistantOpen} onClose={() => setAiAssistantOpen(false)} />
     </div>
   );

@@ -498,6 +498,7 @@ class ConverterService:
                     where_clauses.append((block_name, clause))
                 used_fields.update(fields)
             elif isinstance(block_value, list):
+                # Handle list of dicts (OR relationship between items)
                 or_clauses = []
                 for item in block_value:
                     if isinstance(item, dict):
@@ -507,6 +508,9 @@ class ConverterService:
                         if clause:
                             or_clauses.append(clause)
                         used_fields.update(fields)
+                    elif isinstance(item, str):
+                        # Handle list of strings (simple values)
+                        or_clauses.append(f'"{self._escape_spl_value(item)}"')
                 if or_clauses:
                     combined = " OR ".join(f"({c})" for c in or_clauses)
                     where_clauses.append((block_name, combined))
