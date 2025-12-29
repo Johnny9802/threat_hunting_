@@ -31,7 +31,9 @@ def get_cors_origins():
         # In production, use explicit whitelist from environment variable
         allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
         # Filter out empty strings and strip whitespace
-        allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
+        allowed_origins = [
+            origin.strip() for origin in allowed_origins if origin.strip()
+        ]
         if not allowed_origins:
             # Fallback: if no origins configured, deny all (safer than wildcard)
             allowed_origins = []
@@ -43,7 +45,7 @@ def get_cors_origins():
             "http://localhost:8000",
             "http://127.0.0.1",
             "http://127.0.0.1:3000",
-            "http://127.0.0.1:8000"
+            "http://127.0.0.1:8000",
         ]
     return allowed_origins
 
@@ -59,7 +61,7 @@ app = FastAPI(
     description="AI-powered REST API for managing threat hunting playbooks",
     version="2.0.0",
     docs_url=DOCS_URL,
-    redoc_url=REDOC_URL
+    redoc_url=REDOC_URL,
 )
 
 # CORS middleware with secure configuration
@@ -67,7 +69,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
     allow_credentials=False,  # Set to False for public API; only True if authentication needed
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],  # All needed methods for CRUD
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+    ],  # All needed methods for CRUD
     allow_headers=["Content-Type", "Authorization"],  # Only necessary headers
 )
 
@@ -83,6 +91,7 @@ mitre = MitreMapper()
 # PYDANTIC VALIDATION MODELS FOR INPUT VALIDATION
 # ============================================================================
 
+
 class ExplainRequest(BaseModel):
     """Pydantic model for AI explain endpoint validation."""
 
@@ -91,10 +100,10 @@ class ExplainRequest(BaseModel):
         min_length=1,
         max_length=255,
         description="The ID of the playbook to explain",
-        example="playbook_001"
+        example="playbook_001",
     )
 
-    @validator('playbook_id')
+    @validator("playbook_id")
     def validate_playbook_id(cls, v):
         """Validate playbook_id for security threats."""
         if not v or not isinstance(v, str):
@@ -102,9 +111,16 @@ class ExplainRequest(BaseModel):
 
         # Check for prompt injection patterns
         injection_patterns = [
-            r'<script', r'javascript:', r'onerror=', r'onclick=',
-            r'union\s+select', r'drop\s+table', r'insert\s+into',
-            r'delete\s+from', r'update\s+', r'select\s+.*from',
+            r"<script",
+            r"javascript:",
+            r"onerror=",
+            r"onclick=",
+            r"union\s+select",
+            r"drop\s+table",
+            r"insert\s+into",
+            r"delete\s+from",
+            r"update\s+",
+            r"select\s+.*from",
         ]
 
         for pattern in injection_patterns:
@@ -112,17 +128,15 @@ class ExplainRequest(BaseModel):
                 raise ValueError("playbook_id contains potentially malicious patterns")
 
         # Allowed characters: alphanumeric, underscore, hyphen, dot
-        if not re.match(r'^[a-zA-Z0-9_\-\.]+$', v):
-            raise ValueError("playbook_id contains invalid characters. Use only alphanumeric, underscore, hyphen, or dot")
+        if not re.match(r"^[a-zA-Z0-9_\-\.]+$", v):
+            raise ValueError(
+                "playbook_id contains invalid characters. Use only alphanumeric, underscore, hyphen, or dot"
+            )
 
         return v.strip()
 
     class Config:
-        schema_extra = {
-            "example": {
-                "playbook_id": "playbook_001"
-            }
-        }
+        schema_extra = {"example": {"playbook_id": "playbook_001"}}
 
 
 class AskRequest(BaseModel):
@@ -133,10 +147,10 @@ class AskRequest(BaseModel):
         min_length=3,
         max_length=1000,
         description="The question to ask the AI assistant",
-        example="What are the best practices for detecting lateral movement?"
+        example="What are the best practices for detecting lateral movement?",
     )
 
-    @validator('question')
+    @validator("question")
     def validate_question(cls, v):
         """Validate question for security threats and content quality."""
         if not v or not isinstance(v, str):
@@ -148,11 +162,20 @@ class AskRequest(BaseModel):
 
         # Check for prompt injection patterns
         injection_patterns = [
-            r'<script', r'javascript:', r'onerror=', r'onclick=',
-            r'union\s+select', r'drop\s+table', r'insert\s+into',
-            r'delete\s+from', r'update\s+',
-            r'ignore\s+instructions', r'bypass', r'override',
-            r'system\s+prompt', r'jailbreak',
+            r"<script",
+            r"javascript:",
+            r"onerror=",
+            r"onclick=",
+            r"union\s+select",
+            r"drop\s+table",
+            r"insert\s+into",
+            r"delete\s+from",
+            r"update\s+",
+            r"ignore\s+instructions",
+            r"bypass",
+            r"override",
+            r"system\s+prompt",
+            r"jailbreak",
         ]
 
         for pattern in injection_patterns:
@@ -160,7 +183,7 @@ class AskRequest(BaseModel):
                 raise ValueError("question contains potentially malicious patterns")
 
         # Check for excessive special characters (more than 15%)
-        special_chars = len(re.findall(r'[^a-zA-Z0-9\s\?\!\.,-]', v))
+        special_chars = len(re.findall(r"[^a-zA-Z0-9\s\?\!\.,-]", v))
         if special_chars > len(v) * 0.15:
             raise ValueError("question contains too many special characters")
 
@@ -182,17 +205,17 @@ class SuggestRequest(BaseModel):
         min_length=3,
         max_length=1000,
         description="The security finding to investigate",
-        example="Unusual process execution from temp directory"
+        example="Unusual process execution from temp directory",
     )
 
     playbook_id: Optional[str] = Field(
         None,
         max_length=255,
         description="Optional playbook ID for context",
-        example="playbook_001"
+        example="playbook_001",
     )
 
-    @validator('finding')
+    @validator("finding")
     def validate_finding(cls, v):
         """Validate finding for security threats."""
         if not v or not isinstance(v, str):
@@ -204,10 +227,18 @@ class SuggestRequest(BaseModel):
 
         # Check for prompt injection patterns
         injection_patterns = [
-            r'<script', r'javascript:', r'onerror=', r'onclick=',
-            r'union\s+select', r'drop\s+table', r'insert\s+into',
-            r'delete\s+from', r'update\s+',
-            r'ignore\s+instructions', r'bypass', r'override',
+            r"<script",
+            r"javascript:",
+            r"onerror=",
+            r"onclick=",
+            r"union\s+select",
+            r"drop\s+table",
+            r"insert\s+into",
+            r"delete\s+from",
+            r"update\s+",
+            r"ignore\s+instructions",
+            r"bypass",
+            r"override",
         ]
 
         for pattern in injection_patterns:
@@ -216,7 +247,7 @@ class SuggestRequest(BaseModel):
 
         return v.strip()
 
-    @validator('playbook_id')
+    @validator("playbook_id")
     def validate_playbook_id_optional(cls, v):
         """Validate optional playbook_id."""
         if v is None:
@@ -227,9 +258,15 @@ class SuggestRequest(BaseModel):
 
         # Check for prompt injection patterns
         injection_patterns = [
-            r'<script', r'javascript:', r'onerror=', r'onclick=',
-            r'union\s+select', r'drop\s+table', r'insert\s+into',
-            r'delete\s+from', r'update\s+',
+            r"<script",
+            r"javascript:",
+            r"onerror=",
+            r"onclick=",
+            r"union\s+select",
+            r"drop\s+table",
+            r"insert\s+into",
+            r"delete\s+from",
+            r"update\s+",
         ]
 
         for pattern in injection_patterns:
@@ -237,7 +274,7 @@ class SuggestRequest(BaseModel):
                 raise ValueError("playbook_id contains potentially malicious patterns")
 
         # Allowed characters: alphanumeric, underscore, hyphen, dot
-        if not re.match(r'^[a-zA-Z0-9_\-\.]+$', v):
+        if not re.match(r"^[a-zA-Z0-9_\-\.]+$", v):
             raise ValueError("playbook_id contains invalid characters")
 
         return v.strip()
@@ -246,7 +283,7 @@ class SuggestRequest(BaseModel):
         schema_extra = {
             "example": {
                 "finding": "Unusual process execution from temp directory",
-                "playbook_id": "playbook_001"
+                "playbook_id": "playbook_001",
             }
         }
 
@@ -259,7 +296,7 @@ class GenerateRequest(BaseModel):
         min_length=1,
         max_length=255,
         description="The ID of the playbook to generate variant for",
-        example="playbook_001"
+        example="playbook_001",
     )
 
     target_env: str = Field(
@@ -267,7 +304,7 @@ class GenerateRequest(BaseModel):
         min_length=2,
         max_length=100,
         description="Target environment (e.g., 'production', 'cloud-aws')",
-        example="production"
+        example="production",
     )
 
     target_siem: str = Field(
@@ -275,10 +312,10 @@ class GenerateRequest(BaseModel):
         min_length=2,
         max_length=50,
         description="Target SIEM platform (e.g., 'splunk', 'elasticsearch')",
-        example="splunk"
+        example="splunk",
     )
 
-    @validator('playbook_id')
+    @validator("playbook_id")
     def validate_playbook_id_gen(cls, v):
         """Validate playbook_id for security threats."""
         if not v or not isinstance(v, str):
@@ -286,9 +323,16 @@ class GenerateRequest(BaseModel):
 
         # Check for prompt injection patterns
         injection_patterns = [
-            r'<script', r'javascript:', r'onerror=', r'onclick=',
-            r'union\s+select', r'drop\s+table', r'insert\s+into',
-            r'delete\s+from', r'update\s+', r'select\s+.*from',
+            r"<script",
+            r"javascript:",
+            r"onerror=",
+            r"onclick=",
+            r"union\s+select",
+            r"drop\s+table",
+            r"insert\s+into",
+            r"delete\s+from",
+            r"update\s+",
+            r"select\s+.*from",
         ]
 
         for pattern in injection_patterns:
@@ -296,12 +340,12 @@ class GenerateRequest(BaseModel):
                 raise ValueError("playbook_id contains potentially malicious patterns")
 
         # Allowed characters: alphanumeric, underscore, hyphen, dot
-        if not re.match(r'^[a-zA-Z0-9_\-\.]+$', v):
+        if not re.match(r"^[a-zA-Z0-9_\-\.]+$", v):
             raise ValueError("playbook_id contains invalid characters")
 
         return v.strip()
 
-    @validator('target_env')
+    @validator("target_env")
     def validate_target_env(cls, v):
         """Validate target_env for security threats."""
         if not v or not isinstance(v, str):
@@ -309,8 +353,12 @@ class GenerateRequest(BaseModel):
 
         # Check for prompt injection patterns
         injection_patterns = [
-            r'<script', r'javascript:', r'onerror=', r'onclick=',
-            r'union\s+select', r'drop\s+table',
+            r"<script",
+            r"javascript:",
+            r"onerror=",
+            r"onclick=",
+            r"union\s+select",
+            r"drop\s+table",
         ]
 
         for pattern in injection_patterns:
@@ -318,12 +366,12 @@ class GenerateRequest(BaseModel):
                 raise ValueError("target_env contains potentially malicious patterns")
 
         # Allowed characters: alphanumeric, underscore, hyphen, dot
-        if not re.match(r'^[a-zA-Z0-9_\-\.]+$', v):
+        if not re.match(r"^[a-zA-Z0-9_\-\.]+$", v):
             raise ValueError("target_env contains invalid characters")
 
         return v.strip()
 
-    @validator('target_siem')
+    @validator("target_siem")
     def validate_target_siem(cls, v):
         """Validate target_siem for security threats."""
         if not v or not isinstance(v, str):
@@ -331,8 +379,12 @@ class GenerateRequest(BaseModel):
 
         # Check for prompt injection patterns
         injection_patterns = [
-            r'<script', r'javascript:', r'onerror=', r'onclick=',
-            r'union\s+select', r'drop\s+table',
+            r"<script",
+            r"javascript:",
+            r"onerror=",
+            r"onclick=",
+            r"union\s+select",
+            r"drop\s+table",
         ]
 
         for pattern in injection_patterns:
@@ -340,7 +392,7 @@ class GenerateRequest(BaseModel):
                 raise ValueError("target_siem contains potentially malicious patterns")
 
         # Allowed characters: alphanumeric, underscore, hyphen, dot
-        if not re.match(r'^[a-zA-Z0-9_\-\.]+$', v):
+        if not re.match(r"^[a-zA-Z0-9_\-\.]+$", v):
             raise ValueError("target_siem contains invalid characters")
 
         return v.strip()
@@ -350,7 +402,7 @@ class GenerateRequest(BaseModel):
             "example": {
                 "playbook_id": "playbook_001",
                 "target_env": "production",
-                "target_siem": "splunk"
+                "target_siem": "splunk",
             }
         }
 
@@ -370,25 +422,21 @@ async def root():
             "docs": "/docs",
             "playbooks": "/api/playbooks",
             "search": "/api/search",
-            "ai": "/api/ai"
-        }
+            "ai": "/api/ai",
+        },
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "version": "2.0.0",
-        "ai_available": ai.is_available()
-    }
+    return {"status": "healthy", "version": "2.0.0", "ai_available": ai.is_available()}
 
 
 @app.get("/api/playbooks")
 async def list_playbooks(
     limit: Optional[int] = Query(None, ge=1, le=100),
-    offset: Optional[int] = Query(0, ge=0)
+    offset: Optional[int] = Query(0, ge=0),
 ) -> List[Dict[str, Any]]:
     """List all available playbooks."""
     try:
@@ -396,7 +444,7 @@ async def list_playbooks(
 
         # Apply pagination
         if limit:
-            playbooks = playbooks[offset:offset + limit]
+            playbooks = playbooks[offset : offset + limit]
 
         return playbooks
     except Exception as e:
@@ -413,6 +461,7 @@ async def get_playbook(playbook_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Playbook {playbook_id} not found")
     except Exception as e:
         import traceback
+
         error_details = f"{str(e)}\n{traceback.format_exc()}"
         print(f"Error loading playbook {playbook_id}: {error_details}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -424,16 +473,12 @@ async def search_playbooks(
     technique: Optional[str] = None,
     tactic: Optional[str] = None,
     tag: Optional[str] = None,
-    severity: Optional[str] = None
+    severity: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Search playbooks by various criteria."""
     try:
         results = search.search(
-            query=query,
-            technique=technique,
-            tactic=tactic,
-            tag=tag,
-            severity=severity
+            query=query, technique=technique, tactic=tactic, tag=tag, severity=severity
         )
         return results
     except Exception as e:
@@ -447,11 +492,7 @@ async def export_query(playbook_id: str, siem: str) -> Dict[str, Any]:
         playbook = search.get_by_id(playbook_id)
         query = exporter.export_query(playbook, siem)
 
-        return {
-            "playbook_id": playbook_id,
-            "siem": siem,
-            "query": query
-        }
+        return {"playbook_id": playbook_id, "siem": siem, "query": query}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Playbook {playbook_id} not found")
     except ValueError as e:
@@ -477,7 +518,7 @@ async def get_technique_info(technique_id: str) -> Dict[str, Any]:
             "technique_id": technique_id,
             "name": mitre.get_technique_name(technique_id),
             "tactic": mitre.get_tactic_for_technique(technique_id),
-            "url": mitre.get_attack_url(technique_id)
+            "url": mitre.get_attack_url(technique_id),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -494,24 +535,23 @@ async def get_coverage_gaps() -> Dict[str, Any]:
         covered_techniques = set()
 
         for pb in playbooks:
-            tactic = pb.get('mitre', {}).get('tactic') or pb.get('tactic', 'unknown')
-            technique = pb.get('mitre', {}).get('technique') or pb.get('technique')
+            tactic = pb.get("mitre", {}).get("tactic") or pb.get("tactic", "unknown")
+            technique = pb.get("mitre", {}).get("technique") or pb.get("technique")
 
             if tactic not in tactic_coverage:
-                tactic_coverage[tactic] = {
-                    'techniques': set(),
-                    'playbooks': 0
-                }
+                tactic_coverage[tactic] = {"techniques": set(), "playbooks": 0}
 
             if technique:
-                tactic_coverage[tactic]['techniques'].add(technique)
+                tactic_coverage[tactic]["techniques"].add(technique)
                 covered_techniques.add(technique)
 
-            tactic_coverage[tactic]['playbooks'] += 1
+            tactic_coverage[tactic]["playbooks"] += 1
 
         # Convert sets to lists for JSON
         for tactic in tactic_coverage:
-            tactic_coverage[tactic]['techniques'] = list(tactic_coverage[tactic]['techniques'])
+            tactic_coverage[tactic]["techniques"] = list(
+                tactic_coverage[tactic]["techniques"]
+            )
 
         # Get AI suggestions for gaps if available
         suggestions = None
@@ -548,10 +588,11 @@ Keep response concise and actionable."""
             "gaps": {
                 "uncovered_count": 193 - len(covered_techniques),
                 "tactics_needing_attention": [
-                    tactic for tactic, data in tactic_coverage.items()
-                    if len(data['techniques']) < 3
-                ]
-            }
+                    tactic
+                    for tactic, data in tactic_coverage.items()
+                    if len(data["techniques"]) < 3
+                ],
+            },
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -569,18 +610,20 @@ async def ai_explain(request: ExplainRequest) -> Dict[str, str]:
     - Validates playbook_id format and length
     """
     if not ai.is_available():
-        raise HTTPException(status_code=503, detail="AI service not available. Configure GROQ_API_KEY or OPENAI_API_KEY")
+        raise HTTPException(
+            status_code=503,
+            detail="AI service not available. Configure GROQ_API_KEY or OPENAI_API_KEY",
+        )
 
     try:
         playbook = search.get_by_id(request.playbook_id)
         explanation = ai.explain_playbook(playbook)
 
-        return {
-            "playbook_id": request.playbook_id,
-            "explanation": explanation
-        }
+        return {"playbook_id": request.playbook_id, "explanation": explanation}
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Playbook {request.playbook_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Playbook {request.playbook_id} not found"
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -602,10 +645,7 @@ async def ai_ask(request: AskRequest) -> Dict[str, str]:
 
     try:
         answer = ai.ask_question(request.question)
-        return {
-            "question": request.question,
-            "answer": answer
-        }
+        return {"question": request.question, "answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -635,7 +675,7 @@ async def ai_suggest(request: SuggestRequest) -> Dict[str, str]:
         return {
             "finding": request.finding,
             "playbook_id": request.playbook_id,
-            "suggestions": suggestions
+            "suggestions": suggestions,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -666,10 +706,12 @@ async def ai_generate(request: GenerateRequest) -> Dict[str, str]:
             "playbook_id": request.playbook_id,
             "target_env": request.target_env,
             "target_siem": request.target_siem,
-            "variant": variant
+            "variant": variant,
         }
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Playbook {request.playbook_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Playbook {request.playbook_id} not found"
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -685,8 +727,8 @@ async def get_stats() -> Dict[str, Any]:
         severities = {}
 
         for pb in playbooks:
-            tactic = pb.get('tactic', 'unknown')
-            severity = pb.get('severity', 'unknown')
+            tactic = pb.get("tactic", "unknown")
+            severity = pb.get("severity", "unknown")
 
             tactics[tactic] = tactics.get(tactic, 0) + 1
             severities[severity] = severities.get(severity, 0) + 1
@@ -696,7 +738,7 @@ async def get_stats() -> Dict[str, Any]:
             "by_tactic": tactics,
             "by_severity": severities,
             "ai_available": ai.is_available(),
-            "supported_siems": exporter.SUPPORTED_SIEMS
+            "supported_siems": exporter.SUPPORTED_SIEMS,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -706,6 +748,7 @@ async def get_stats() -> Dict[str, Any]:
 # PLAYBOOK CRUD ENDPOINTS
 # ============================================================================
 
+
 class CreatePlaybookRequest(BaseModel):
     """Pydantic model for creating a new playbook."""
 
@@ -714,14 +757,13 @@ class CreatePlaybookRequest(BaseModel):
         min_length=1,
         max_length=50,
         description="Unique playbook ID (e.g., PB-T1566-001)",
-        example="PB-T1566-001"
+        example="PB-T1566-001",
     )
     name: str = Field(..., min_length=1, max_length=200)
     description: str = Field(..., min_length=1, max_length=1000)
 
     mitre: Dict[str, Any] = Field(
-        ...,
-        description="MITRE ATT&CK mapping with technique and tactic"
+        ..., description="MITRE ATT&CK mapping with technique and tactic"
     )
 
     severity: str = Field(..., description="Severity level")
@@ -734,24 +776,23 @@ class CreatePlaybookRequest(BaseModel):
     tags: List[str] = Field(default_factory=list)
 
     queries_content: Optional[Dict[str, str]] = Field(
-        None,
-        description="Query content for different SIEMs"
+        None, description="Query content for different SIEMs"
     )
 
     iocs: Optional[List[Dict[str, str]]] = Field(default_factory=list)
     response: Optional[Dict[str, List[str]]] = Field(None)
 
-    @validator('id')
+    @validator("id")
     def validate_id(cls, v):
         """Validate playbook ID format."""
-        if not re.match(r'^PB-[A-Z0-9]+-\d+$', v):
+        if not re.match(r"^PB-[A-Z0-9]+-\d+$", v):
             raise ValueError("ID must follow format: PB-TXXXX-NNN")
         return v
 
-    @validator('severity')
+    @validator("severity")
     def validate_severity(cls, v):
         """Validate severity level."""
-        valid_severities = ['critical', 'high', 'medium', 'low']
+        valid_severities = ["critical", "high", "medium", "low"]
         if v.lower() not in valid_severities:
             raise ValueError(f"Severity must be one of: {', '.join(valid_severities)}")
         return v.lower()
@@ -775,12 +816,12 @@ class UpdatePlaybookRequest(BaseModel):
     iocs: Optional[List[Dict[str, str]]] = None
     response: Optional[Dict[str, List[str]]] = None
 
-    @validator('severity')
+    @validator("severity")
     def validate_severity(cls, v):
         """Validate severity level."""
         if v is None:
             return v
-        valid_severities = ['critical', 'high', 'medium', 'low']
+        valid_severities = ["critical", "high", "medium", "low"]
         if v.lower() not in valid_severities:
             raise ValueError(f"Severity must be one of: {', '.join(valid_severities)}")
         return v.lower()
@@ -801,19 +842,19 @@ async def create_playbook(request: CreatePlaybookRequest) -> Dict[str, Any]:
             existing = search.get_by_id(request.id)
             if existing:
                 raise HTTPException(
-                    status_code=409,
-                    detail=f"Playbook {request.id} already exists"
+                    status_code=409, detail=f"Playbook {request.id} already exists"
                 )
         except FileNotFoundError:
             pass  # OK, playbook doesn't exist
 
         # Create playbook directory structure
         from src.playbook_writer import PlaybookWriter
+
         writer = PlaybookWriter()
 
         playbook_data = request.dict()
-        playbook_data['created'] = datetime.now().isoformat()
-        playbook_data['updated'] = datetime.now().isoformat()
+        playbook_data["created"] = datetime.now().isoformat()
+        playbook_data["updated"] = datetime.now().isoformat()
 
         writer.create_playbook(playbook_data)
 
@@ -831,8 +872,7 @@ async def create_playbook(request: CreatePlaybookRequest) -> Dict[str, Any]:
 
 @app.put("/api/playbooks/{playbook_id}")
 async def update_playbook(
-    playbook_id: str,
-    request: UpdatePlaybookRequest
+    playbook_id: str, request: UpdatePlaybookRequest
 ) -> Dict[str, Any]:
     """Update an existing playbook.
 
@@ -848,16 +888,16 @@ async def update_playbook(
         existing = search.get_by_id(playbook_id)
         if not existing:
             raise HTTPException(
-                status_code=404,
-                detail=f"Playbook {playbook_id} not found"
+                status_code=404, detail=f"Playbook {playbook_id} not found"
             )
 
         # Update playbook
         from src.playbook_writer import PlaybookWriter
+
         writer = PlaybookWriter()
 
         update_data = request.dict(exclude_unset=True)
-        update_data['updated'] = datetime.now().isoformat()
+        update_data["updated"] = datetime.now().isoformat()
 
         writer.update_playbook(playbook_id, update_data)
 
@@ -890,12 +930,12 @@ async def delete_playbook(playbook_id: str) -> Dict[str, str]:
         existing = search.get_by_id(playbook_id)
         if not existing:
             raise HTTPException(
-                status_code=404,
-                detail=f"Playbook {playbook_id} not found"
+                status_code=404, detail=f"Playbook {playbook_id} not found"
             )
 
         # Delete playbook
         from src.playbook_writer import PlaybookWriter
+
         writer = PlaybookWriter()
         writer.delete_playbook(playbook_id)
 
@@ -904,7 +944,7 @@ async def delete_playbook(playbook_id: str) -> Dict[str, str]:
 
         return {
             "message": f"Playbook {playbook_id} deleted successfully",
-            "playbook_id": playbook_id
+            "playbook_id": playbook_id,
         }
 
     except FileNotFoundError:
@@ -916,14 +956,16 @@ async def delete_playbook(playbook_id: str) -> Dict[str, str]:
 # AI Configuration endpoints
 class AIConfigRequest(BaseModel):
     """Pydantic model for AI configuration."""
-    provider: str = Field(..., pattern=r'^(groq|openai)$')
+
+    provider: str = Field(..., pattern=r"^(groq|openai)$")
     groq_api_key: Optional[str] = None
     openai_api_key: Optional[str] = None
 
 
 class AITestRequest(BaseModel):
     """Pydantic model for AI test request."""
-    provider: str = Field(..., pattern=r'^(groq|openai)$')
+
+    provider: str = Field(..., pattern=r"^(groq|openai)$")
     api_key: str = Field(..., min_length=1)
 
 
@@ -933,22 +975,23 @@ async def configure_ai(request: AIConfigRequest) -> Dict[str, str]:
     import os
 
     # Update environment variables
-    if request.provider == 'groq' and request.groq_api_key:
-        os.environ['GROQ_API_KEY'] = request.groq_api_key
-        os.environ['AI_PROVIDER'] = 'groq'
-    elif request.provider == 'openai' and request.openai_api_key:
-        os.environ['OPENAI_API_KEY'] = request.openai_api_key
-        os.environ['AI_PROVIDER'] = 'openai'
+    if request.provider == "groq" and request.groq_api_key:
+        os.environ["GROQ_API_KEY"] = request.groq_api_key
+        os.environ["AI_PROVIDER"] = "groq"
+    elif request.provider == "openai" and request.openai_api_key:
+        os.environ["OPENAI_API_KEY"] = request.openai_api_key
+        os.environ["AI_PROVIDER"] = "openai"
 
     # Reinitialize AI assistant
     global ai
     from src.ai_assistant import AIAssistant
+
     ai = AIAssistant()
 
     return {
         "message": "AI configuration updated",
         "provider": request.provider,
-        "status": "available" if ai.is_available() else "unavailable"
+        "status": "available" if ai.is_available() else "unavailable",
     }
 
 
@@ -958,19 +1001,22 @@ async def test_ai_connection(request: AITestRequest) -> Dict[str, Any]:
     import os
 
     # Temporarily set the API key
-    if request.provider == 'groq':
-        os.environ['GROQ_API_KEY'] = request.api_key
-        os.environ['AI_PROVIDER'] = 'groq'
+    if request.provider == "groq":
+        os.environ["GROQ_API_KEY"] = request.api_key
+        os.environ["AI_PROVIDER"] = "groq"
     else:
-        os.environ['OPENAI_API_KEY'] = request.api_key
-        os.environ['AI_PROVIDER'] = 'openai'
+        os.environ["OPENAI_API_KEY"] = request.api_key
+        os.environ["AI_PROVIDER"] = "openai"
 
     # Reinitialize AI assistant
     from src.ai_assistant import AIAssistant
+
     test_ai = AIAssistant()
 
     if not test_ai.is_available():
-        raise HTTPException(status_code=400, detail="AI service not available with provided credentials")
+        raise HTTPException(
+            status_code=400, detail="AI service not available with provided credentials"
+        )
 
     try:
         # Simple test query
@@ -978,7 +1024,7 @@ async def test_ai_connection(request: AITestRequest) -> Dict[str, Any]:
         return {
             "status": "success",
             "provider": request.provider,
-            "message": "Connection successful"
+            "message": "Connection successful",
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"AI test failed: {str(e)}")
@@ -991,9 +1037,9 @@ async def get_ai_status() -> Dict[str, Any]:
 
     return {
         "available": ai.is_available(),
-        "provider": os.environ.get('AI_PROVIDER', 'none'),
-        "groq_configured": bool(os.environ.get('GROQ_API_KEY')),
-        "openai_configured": bool(os.environ.get('OPENAI_API_KEY'))
+        "provider": os.environ.get("AI_PROVIDER", "none"),
+        "groq_configured": bool(os.environ.get("GROQ_API_KEY")),
+        "openai_configured": bool(os.environ.get("OPENAI_API_KEY")),
     }
 
 
@@ -1022,7 +1068,15 @@ try:
         PrerequisiteInfo,
     )
     from src.sigma.database import sigma_db
-    from src.sigma.models import SigmaConversion, ConversionType, FieldMapping, MappingStatus, SysmonConfig, WindowsAuditConfig
+    from src.sigma.models import (
+        SigmaConversion,
+        ConversionType,
+        FieldMapping,
+        MappingStatus,
+        SysmonConfig,
+        WindowsAuditConfig,
+    )
+
     SIGMA_AVAILABLE = True
 except ImportError as e:
     print(f"Sigma Translator module not available: {e}")
@@ -1043,7 +1097,7 @@ if SIGMA_AVAILABLE:
         service: Optional[str] = None,
         category: Optional[str] = None,
         limit: int = Query(50, ge=1, le=200),
-        offset: int = Query(0, ge=0)
+        offset: int = Query(0, ge=0),
     ) -> Dict[str, Any]:
         """List Sigma rules from repository with filtering."""
         rules, total = sigma_service.list_rules(
@@ -1052,14 +1106,9 @@ if SIGMA_AVAILABLE:
             service=service,
             category=category,
             limit=limit,
-            offset=offset
+            offset=offset,
         )
-        return {
-            "rules": rules,
-            "total": total,
-            "limit": limit,
-            "offset": offset
-        }
+        return {"rules": rules, "total": total, "limit": limit, "offset": offset}
 
     @app.get("/api/sigma/rules/{path:path}")
     async def get_sigma_rule(path: str) -> Dict[str, Any]:
@@ -1087,7 +1136,7 @@ if SIGMA_AVAILABLE:
             "valid": True,
             "title": rule.get("title"),
             "fields": sigma_service.extract_fields(rule),
-            "logsource": sigma_service.get_logsource_info(rule)
+            "logsource": sigma_service.get_logsource_info(rule),
         }
 
     # Conversion endpoints
@@ -1110,23 +1159,32 @@ if SIGMA_AVAILABLE:
             profile = sigma_db.get_profile(request.profile_id)
             if profile:
                 profile_name = profile.name
-                use_cim = request.cim_override if request.cim_override is not None else profile.cim_enabled
+                use_cim = (
+                    request.cim_override
+                    if request.cim_override is not None
+                    else profile.cim_enabled
+                )
                 if not index_override:
-                    index_override = profile.index_name if profile.index_name != "*" else None
+                    index_override = (
+                        profile.index_name if profile.index_name != "*" else None
+                    )
                 custom_mappings = sigma_db.get_mappings_dict(profile.id)
 
         # Perform conversion
-        spl, mappings, prerequisites, gaps, health_checks = converter_service.convert_sigma_to_spl(
-            rule=rule,
-            custom_mappings=custom_mappings,
-            use_cim=use_cim,
-            index_override=index_override,
-            sourcetype_override=sourcetype_override,
-            time_range=request.time_range,
+        spl, mappings, prerequisites, gaps, health_checks = (
+            converter_service.convert_sigma_to_spl(
+                rule=rule,
+                custom_mappings=custom_mappings,
+                use_cim=use_cim,
+                index_override=index_override,
+                sourcetype_override=sourcetype_override,
+                time_range=request.time_range,
+            )
         )
 
         # Save to history
         import json
+
         conversion = SigmaConversion(
             name=rule.get("title", "Untitled Rule"),
             conversion_type=ConversionType.SIGMA_TO_SPL,
@@ -1177,17 +1235,21 @@ if SIGMA_AVAILABLE:
             if enhanced_sigma:
                 sigma_yaml = enhanced_sigma
                 if improvements:
-                    correlation_notes = (correlation_notes or "") + "\n\nLLM Improvements:\n" + "\n".join(
-                        f"- {i}" for i in improvements
+                    correlation_notes = (
+                        (correlation_notes or "")
+                        + "\n\nLLM Improvements:\n"
+                        + "\n".join(f"- {i}" for i in improvements)
                     )
 
         # Parse the generated sigma to get prerequisites
         rule, _ = sigma_service.parse_yaml(sigma_yaml)
         if rule:
-            _, mappings, prerequisites, gaps, health_checks = converter_service.convert_sigma_to_spl(
-                rule=rule,
-                custom_mappings={},
-                use_cim=False,
+            _, mappings, prerequisites, gaps, health_checks = (
+                converter_service.convert_sigma_to_spl(
+                    rule=rule,
+                    custom_mappings={},
+                    use_cim=False,
+                )
             )
         else:
             prerequisites = PrerequisiteInfo(
@@ -1202,6 +1264,7 @@ if SIGMA_AVAILABLE:
 
         # Save to history
         import json
+
         conversion = SigmaConversion(
             name=request.title,
             conversion_type=ConversionType.SPL_TO_SIGMA,
@@ -1218,10 +1281,16 @@ if SIGMA_AVAILABLE:
             "name": request.title,
             "spl": request.spl_query,
             "sigma_yaml": sigma_yaml,
-            "prerequisites": prerequisites.model_dump() if hasattr(prerequisites, 'model_dump') else {},
+            "prerequisites": (
+                prerequisites.model_dump()
+                if hasattr(prerequisites, "model_dump")
+                else {}
+            ),
             "mappings": [m.model_dump() for m in mappings] if mappings else [],
             "gaps": [g.model_dump() for g in gaps] if gaps else [],
-            "health_checks": [h.model_dump() for h in health_checks] if health_checks else [],
+            "health_checks": (
+                [h.model_dump() for h in health_checks] if health_checks else []
+            ),
             "correlation_notes": correlation_notes,
             "llm_used": llm_service.is_available,
         }
@@ -1259,10 +1328,12 @@ if SIGMA_AVAILABLE:
             )
 
         # Get prerequisites and mappings
-        _, mappings, prerequisites, gaps, health_checks = converter_service.convert_sigma_to_spl(
-            rule=rule,
-            custom_mappings={},
-            use_cim=False,
+        _, mappings, prerequisites, gaps, health_checks = (
+            converter_service.convert_sigma_to_spl(
+                rule=rule,
+                custom_mappings={},
+                use_cim=False,
+            )
         )
 
         # If SPL wasn't generated, convert from Sigma
@@ -1276,10 +1347,13 @@ if SIGMA_AVAILABLE:
         # Format assumptions as notes
         correlation_notes = None
         if assumptions:
-            correlation_notes = "Assumptions Made:\n" + "\n".join(f"- {a}" for a in assumptions)
+            correlation_notes = "Assumptions Made:\n" + "\n".join(
+                f"- {a}" for a in assumptions
+            )
 
         # Save to history
         import json
+
         conversion = SigmaConversion(
             name=rule.get("title", "Generated Detection"),
             conversion_type=ConversionType.TEXT_TO_SIGMA,
@@ -1315,6 +1389,7 @@ if SIGMA_AVAILABLE:
     async def create_profile(request: ProfileCreate) -> Dict[str, Any]:
         """Create a new Sigma profile."""
         from src.sigma.models import Profile as ProfileModel
+
         profile = ProfileModel(
             name=request.name,
             description=request.description,
@@ -1339,9 +1414,10 @@ if SIGMA_AVAILABLE:
     async def update_profile(profile_id: int, request: ProfileUpdate) -> Dict[str, Any]:
         """Update a Sigma profile."""
         updates = request.model_dump(exclude_unset=True)
-        if 'macros' in updates and updates['macros'] is not None:
+        if "macros" in updates and updates["macros"] is not None:
             import json
-            updates['macros'] = json.dumps(updates['macros'])
+
+            updates["macros"] = json.dumps(updates["macros"])
         profile = sigma_db.update_profile(profile_id, updates)
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")
@@ -1362,13 +1438,19 @@ if SIGMA_AVAILABLE:
         return [m.to_dict() for m in mappings]
 
     @app.post("/api/sigma/profiles/{profile_id}/mappings")
-    async def create_mapping(profile_id: int, request: FieldMappingCreate) -> Dict[str, Any]:
+    async def create_mapping(
+        profile_id: int, request: FieldMappingCreate
+    ) -> Dict[str, Any]:
         """Create a new field mapping."""
         mapping = FieldMapping(
             profile_id=profile_id,
             sigma_field=request.sigma_field,
             target_field=request.target_field,
-            status=MappingStatus(request.status.value) if request.status else MappingStatus.OK,
+            status=(
+                MappingStatus(request.status.value)
+                if request.status
+                else MappingStatus.OK
+            ),
             category=request.category,
             notes=request.notes,
         )
@@ -1376,11 +1458,13 @@ if SIGMA_AVAILABLE:
         return created.to_dict()
 
     @app.patch("/api/sigma/profiles/{profile_id}/mappings/{mapping_id}")
-    async def update_mapping(profile_id: int, mapping_id: int, request: FieldMappingUpdate) -> Dict[str, Any]:
+    async def update_mapping(
+        profile_id: int, mapping_id: int, request: FieldMappingUpdate
+    ) -> Dict[str, Any]:
         """Update a field mapping."""
         updates = request.model_dump(exclude_unset=True)
-        if 'status' in updates and updates['status']:
-            updates['status'] = updates['status'].value
+        if "status" in updates and updates["status"]:
+            updates["status"] = updates["status"].value
         mapping = sigma_db.update_mapping(mapping_id, updates)
         if not mapping:
             raise HTTPException(status_code=404, detail="Mapping not found")
@@ -1394,7 +1478,9 @@ if SIGMA_AVAILABLE:
         raise HTTPException(status_code=404, detail="Mapping not found")
 
     @app.post("/api/sigma/profiles/{profile_id}/mappings/bulk")
-    async def bulk_import_mappings(profile_id: int, request: BulkMappingImport) -> Dict[str, Any]:
+    async def bulk_import_mappings(
+        profile_id: int, request: BulkMappingImport
+    ) -> Dict[str, Any]:
         """Bulk import field mappings for a profile."""
         mappings = []
         for m in request.mappings:
@@ -1421,14 +1507,16 @@ if SIGMA_AVAILABLE:
     async def get_conversion_history(
         limit: int = Query(50, ge=1, le=200),
         offset: int = Query(0, ge=0),
-        conversion_type: Optional[str] = None
+        conversion_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Get conversion history."""
-        conversions = sigma_db.get_conversions(limit=limit, offset=offset, conversion_type=conversion_type)
+        conversions = sigma_db.get_conversions(
+            limit=limit, offset=offset, conversion_type=conversion_type
+        )
         return {
             "conversions": [c.to_dict() for c in conversions],
             "limit": limit,
-            "offset": offset
+            "offset": offset,
         }
 
     @app.get("/api/sigma/history/{conversion_id}")
@@ -1582,4 +1670,5 @@ if SIGMA_AVAILABLE:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

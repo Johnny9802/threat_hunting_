@@ -1,4 +1,5 @@
 """LLM integration service for enhanced conversions."""
+
 import json
 from typing import Optional, Dict, Any, List, Tuple
 from .config import sigma_settings
@@ -195,7 +196,11 @@ Example format:
             Tuple of (sigma_yaml, spl_query, assumptions)
         """
         if not self.is_available:
-            return None, None, ["LLM not available - this feature requires AI assistance"]
+            return (
+                None,
+                None,
+                ["LLM not available - this feature requires AI assistance"],
+            )
 
         client = self._get_client()
         if not client:
@@ -203,7 +208,11 @@ Example format:
 
         try:
             prompt = self._build_generation_prompt(
-                description, log_source, level, include_false_positives, include_attack_techniques
+                description,
+                log_source,
+                level,
+                include_false_positives,
+                include_attack_techniques,
             )
 
             response = client.chat.completions.create(
@@ -337,7 +346,9 @@ Respond with JSON:
                 content = content.split("```")[1].split("```")[0]
 
             result = json.loads(content.strip())
-            return result.get("enhanced_sigma", current_sigma), result.get("improvements", [])
+            return result.get("enhanced_sigma", current_sigma), result.get(
+                "improvements", []
+            )
 
         except Exception:
             return current_sigma, []

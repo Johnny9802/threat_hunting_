@@ -1,4 +1,5 @@
 """Database management for Sigma Translator module using SQLite."""
+
 import sqlite3
 import json
 import os
@@ -7,7 +8,16 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from contextlib import contextmanager
 
-from .models import Profile, FieldMapping, SigmaConversion, SigmaSetting, SysmonConfig, WindowsAuditConfig, ConversionType, MappingStatus
+from .models import (
+    Profile,
+    FieldMapping,
+    SigmaConversion,
+    SigmaSetting,
+    SysmonConfig,
+    WindowsAuditConfig,
+    ConversionType,
+    MappingStatus,
+)
 from .config import sigma_settings
 
 
@@ -17,7 +27,10 @@ class SigmaDatabase:
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or sigma_settings.DATABASE_URL.replace("sqlite:///", "")
         # Ensure data directory exists
-        os.makedirs(os.path.dirname(self.db_path) if os.path.dirname(self.db_path) else ".", exist_ok=True)
+        os.makedirs(
+            os.path.dirname(self.db_path) if os.path.dirname(self.db_path) else ".",
+            exist_ok=True,
+        )
         self._init_db()
 
     def _init_db(self):
@@ -26,7 +39,8 @@ class SigmaDatabase:
             cursor = conn.cursor()
 
             # Profiles table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS sigma_profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE NOT NULL,
@@ -39,10 +53,12 @@ class SigmaDatabase:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # Field mappings table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS sigma_field_mappings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     profile_id INTEGER NOT NULL,
@@ -55,10 +71,12 @@ class SigmaDatabase:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (profile_id) REFERENCES sigma_profiles(id) ON DELETE CASCADE
                 )
-            """)
+            """
+            )
 
             # Conversions history table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS sigma_conversions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
@@ -75,20 +93,24 @@ class SigmaDatabase:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (profile_id) REFERENCES sigma_profiles(id)
                 )
-            """)
+            """
+            )
 
             # Settings table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS sigma_settings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     key TEXT UNIQUE NOT NULL,
                     value TEXT NOT NULL,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # Sysmon configurations table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS sysmon_configs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
@@ -102,10 +124,12 @@ class SigmaDatabase:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # Windows Audit configurations table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS windows_audit_configs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
@@ -115,13 +139,22 @@ class SigmaDatabase:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # Create indexes
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_mappings_profile ON sigma_field_mappings(profile_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_mappings_field ON sigma_field_mappings(sigma_field)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversions_type ON sigma_conversions(conversion_type)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversions_name ON sigma_conversions(name)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_mappings_profile ON sigma_field_mappings(profile_id)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_mappings_field ON sigma_field_mappings(sigma_field)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_conversions_type ON sigma_conversions(conversion_type)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_conversions_name ON sigma_conversions(name)"
+            )
 
             conn.commit()
 
@@ -134,17 +167,20 @@ class SigmaDatabase:
     def _seed_default_profiles(self, cursor):
         """Create default profiles."""
         # Default Sysmon profile
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO sigma_profiles (name, description, index_name, sourcetype, cim_enabled, is_default)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            "Default (Windows Sysmon)",
-            "Default profile for Windows Sysmon logs",
-            "windows",
-            "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational",
-            0,
-            1
-        ))
+        """,
+            (
+                "Default (Windows Sysmon)",
+                "Default profile for Windows Sysmon logs",
+                "windows",
+                "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational",
+                0,
+                1,
+            ),
+        )
         default_id = cursor.lastrowid
 
         # Default field mappings
@@ -176,23 +212,29 @@ class SigmaDatabase:
         ]
 
         for sigma_field, target_field, category in default_mappings:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO sigma_field_mappings (profile_id, sigma_field, target_field, status, category)
                 VALUES (?, ?, ?, ?, ?)
-            """, (default_id, sigma_field, target_field, "ok", category))
+            """,
+                (default_id, sigma_field, target_field, "ok", category),
+            )
 
         # CIM profile
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO sigma_profiles (name, description, index_name, sourcetype, cim_enabled, is_default)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            "Splunk CIM",
-            "Splunk Common Information Model field names",
-            "*",
-            "*",
-            1,
-            0
-        ))
+        """,
+            (
+                "Splunk CIM",
+                "Splunk Common Information Model field names",
+                "*",
+                "*",
+                1,
+                0,
+            ),
+        )
         cim_id = cursor.lastrowid
 
         # CIM field mappings
@@ -214,10 +256,13 @@ class SigmaDatabase:
         ]
 
         for sigma_field, target_field, category in cim_mappings:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO sigma_field_mappings (profile_id, sigma_field, target_field, status, category)
                 VALUES (?, ?, ?, ?, ?)
-            """, (cim_id, sigma_field, target_field, "ok", category))
+            """,
+                (cim_id, sigma_field, target_field, "ok", category),
+            )
 
     @contextmanager
     def _get_connection(self):
@@ -234,7 +279,9 @@ class SigmaDatabase:
         """Get all profiles."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM sigma_profiles ORDER BY is_default DESC, name")
+            cursor.execute(
+                "SELECT * FROM sigma_profiles ORDER BY is_default DESC, name"
+            )
             rows = cursor.fetchall()
             return [self._row_to_profile(row) for row in rows]
 
@@ -258,29 +305,37 @@ class SigmaDatabase:
         """Create a new profile."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO sigma_profiles (name, description, index_name, sourcetype, cim_enabled, is_default, macros)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                profile.name,
-                profile.description,
-                profile.index_name,
-                profile.sourcetype,
-                1 if profile.cim_enabled else 0,
-                1 if profile.is_default else 0,
-                profile.macros
-            ))
+            """,
+                (
+                    profile.name,
+                    profile.description,
+                    profile.index_name,
+                    profile.sourcetype,
+                    1 if profile.cim_enabled else 0,
+                    1 if profile.is_default else 0,
+                    profile.macros,
+                ),
+            )
             conn.commit()
             profile.id = cursor.lastrowid
             return profile
 
-    def update_profile(self, profile_id: int, updates: Dict[str, Any]) -> Optional[Profile]:
+    def update_profile(
+        self, profile_id: int, updates: Dict[str, Any]
+    ) -> Optional[Profile]:
         """Update a profile."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             set_clause = ", ".join([f"{k} = ?" for k in updates.keys()])
             values = list(updates.values()) + [profile_id]
-            cursor.execute(f"UPDATE sigma_profiles SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?", values)
+            cursor.execute(
+                f"UPDATE sigma_profiles SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                values,
+            )
             conn.commit()
             return self.get_profile(profile_id)
 
@@ -297,7 +352,10 @@ class SigmaDatabase:
         """Get all mappings for a profile."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM sigma_field_mappings WHERE profile_id = ? ORDER BY sigma_field", (profile_id,))
+            cursor.execute(
+                "SELECT * FROM sigma_field_mappings WHERE profile_id = ? ORDER BY sigma_field",
+                (profile_id,),
+            )
             rows = cursor.fetchall()
             return [self._row_to_mapping(row) for row in rows]
 
@@ -310,30 +368,44 @@ class SigmaDatabase:
         """Create a new field mapping."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO sigma_field_mappings (profile_id, sigma_field, target_field, status, category, notes)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                mapping.profile_id,
-                mapping.sigma_field,
-                mapping.target_field,
-                mapping.status.value if isinstance(mapping.status, MappingStatus) else mapping.status,
-                mapping.category,
-                mapping.notes
-            ))
+            """,
+                (
+                    mapping.profile_id,
+                    mapping.sigma_field,
+                    mapping.target_field,
+                    (
+                        mapping.status.value
+                        if isinstance(mapping.status, MappingStatus)
+                        else mapping.status
+                    ),
+                    mapping.category,
+                    mapping.notes,
+                ),
+            )
             conn.commit()
             mapping.id = cursor.lastrowid
             return mapping
 
-    def update_mapping(self, mapping_id: int, updates: Dict[str, Any]) -> Optional[FieldMapping]:
+    def update_mapping(
+        self, mapping_id: int, updates: Dict[str, Any]
+    ) -> Optional[FieldMapping]:
         """Update a field mapping."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             set_clause = ", ".join([f"{k} = ?" for k in updates.keys()])
             values = list(updates.values()) + [mapping_id]
-            cursor.execute(f"UPDATE sigma_field_mappings SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?", values)
+            cursor.execute(
+                f"UPDATE sigma_field_mappings SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                values,
+            )
             conn.commit()
-            cursor.execute("SELECT * FROM sigma_field_mappings WHERE id = ?", (mapping_id,))
+            cursor.execute(
+                "SELECT * FROM sigma_field_mappings WHERE id = ?", (mapping_id,)
+            )
             row = cursor.fetchone()
             return self._row_to_mapping(row) if row else None
 
@@ -341,50 +413,71 @@ class SigmaDatabase:
         """Delete a field mapping."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM sigma_field_mappings WHERE id = ?", (mapping_id,))
+            cursor.execute(
+                "DELETE FROM sigma_field_mappings WHERE id = ?", (mapping_id,)
+            )
             conn.commit()
             return cursor.rowcount > 0
 
-    def bulk_import_mappings(self, profile_id: int, mappings: List[FieldMapping]) -> int:
+    def bulk_import_mappings(
+        self, profile_id: int, mappings: List[FieldMapping]
+    ) -> int:
         """Bulk import mappings for a profile."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             # Delete existing mappings
-            cursor.execute("DELETE FROM sigma_field_mappings WHERE profile_id = ?", (profile_id,))
+            cursor.execute(
+                "DELETE FROM sigma_field_mappings WHERE profile_id = ?", (profile_id,)
+            )
             # Insert new mappings
             for mapping in mappings:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO sigma_field_mappings (profile_id, sigma_field, target_field, status, category, notes)
                     VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    profile_id,
-                    mapping.sigma_field,
-                    mapping.target_field,
-                    mapping.status.value if isinstance(mapping.status, MappingStatus) else mapping.status,
-                    mapping.category,
-                    mapping.notes
-                ))
+                """,
+                    (
+                        profile_id,
+                        mapping.sigma_field,
+                        mapping.target_field,
+                        (
+                            mapping.status.value
+                            if isinstance(mapping.status, MappingStatus)
+                            else mapping.status
+                        ),
+                        mapping.category,
+                        mapping.notes,
+                    ),
+                )
             conn.commit()
             return len(mappings)
 
     # Conversion History operations
-    def get_conversions(self, limit: int = 50, offset: int = 0, conversion_type: Optional[str] = None) -> List[SigmaConversion]:
+    def get_conversions(
+        self, limit: int = 50, offset: int = 0, conversion_type: Optional[str] = None
+    ) -> List[SigmaConversion]:
         """Get conversion history."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             if conversion_type:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT * FROM sigma_conversions
                     WHERE conversion_type = ?
                     ORDER BY created_at DESC
                     LIMIT ? OFFSET ?
-                """, (conversion_type, limit, offset))
+                """,
+                    (conversion_type, limit, offset),
+                )
             else:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT * FROM sigma_conversions
                     ORDER BY created_at DESC
                     LIMIT ? OFFSET ?
-                """, (limit, offset))
+                """,
+                    (limit, offset),
+                )
             rows = cursor.fetchall()
             return [self._row_to_conversion(row) for row in rows]
 
@@ -392,7 +485,9 @@ class SigmaDatabase:
         """Get a specific conversion."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM sigma_conversions WHERE id = ?", (conversion_id,))
+            cursor.execute(
+                "SELECT * FROM sigma_conversions WHERE id = ?", (conversion_id,)
+            )
             row = cursor.fetchone()
             return self._row_to_conversion(row) if row else None
 
@@ -400,24 +495,31 @@ class SigmaDatabase:
         """Save a conversion to history."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO sigma_conversions
                 (name, conversion_type, profile_id, input_content, output_sigma, output_spl,
                  prerequisites, gap_analysis, health_checks, correlation_notes, llm_used)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                conversion.name,
-                conversion.conversion_type.value if isinstance(conversion.conversion_type, ConversionType) else conversion.conversion_type,
-                conversion.profile_id,
-                conversion.input_content,
-                conversion.output_sigma,
-                conversion.output_spl,
-                conversion.prerequisites,
-                conversion.gap_analysis,
-                conversion.health_checks,
-                conversion.correlation_notes,
-                1 if conversion.llm_used else 0
-            ))
+            """,
+                (
+                    conversion.name,
+                    (
+                        conversion.conversion_type.value
+                        if isinstance(conversion.conversion_type, ConversionType)
+                        else conversion.conversion_type
+                    ),
+                    conversion.profile_id,
+                    conversion.input_content,
+                    conversion.output_sigma,
+                    conversion.output_spl,
+                    conversion.prerequisites,
+                    conversion.gap_analysis,
+                    conversion.health_checks,
+                    conversion.correlation_notes,
+                    1 if conversion.llm_used else 0,
+                ),
+            )
             conn.commit()
             conversion.id = cursor.lastrowid
             return conversion
@@ -426,7 +528,9 @@ class SigmaDatabase:
         """Delete a conversion."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM sigma_conversions WHERE id = ?", (conversion_id,))
+            cursor.execute(
+                "DELETE FROM sigma_conversions WHERE id = ?", (conversion_id,)
+            )
             conn.commit()
             return cursor.rowcount > 0
 
@@ -434,10 +538,13 @@ class SigmaDatabase:
         """Delete conversions older than specified days."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 DELETE FROM sigma_conversions
                 WHERE created_at < datetime('now', '-' || ? || ' days')
-            """, (days,))
+            """,
+                (days,),
+            )
             conn.commit()
             return cursor.rowcount
 
@@ -447,15 +554,13 @@ class SigmaDatabase:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM sigma_conversions")
             total = cursor.fetchone()[0]
-            cursor.execute("SELECT conversion_type, COUNT(*) FROM sigma_conversions GROUP BY conversion_type")
+            cursor.execute(
+                "SELECT conversion_type, COUNT(*) FROM sigma_conversions GROUP BY conversion_type"
+            )
             by_type = {row[0]: row[1] for row in cursor.fetchall()}
             cursor.execute("SELECT COUNT(*) FROM sigma_conversions WHERE llm_used = 1")
             llm_count = cursor.fetchone()[0]
-            return {
-                "total": total,
-                "by_type": by_type,
-                "llm_used": llm_count
-            }
+            return {"total": total, "by_type": by_type, "llm_used": llm_count}
 
     # Helper methods
     def _row_to_profile(self, row: sqlite3.Row) -> Profile:
@@ -469,8 +574,12 @@ class SigmaDatabase:
             cim_enabled=bool(row["cim_enabled"]),
             is_default=bool(row["is_default"]),
             macros=row["macros"],
-            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
-            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
+            created_at=(
+                datetime.fromisoformat(row["created_at"]) if row["created_at"] else None
+            ),
+            updated_at=(
+                datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None
+            ),
         )
 
     def _row_to_mapping(self, row: sqlite3.Row) -> FieldMapping:
@@ -483,8 +592,12 @@ class SigmaDatabase:
             status=MappingStatus(row["status"]) if row["status"] else MappingStatus.OK,
             category=row["category"],
             notes=row["notes"],
-            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
-            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
+            created_at=(
+                datetime.fromisoformat(row["created_at"]) if row["created_at"] else None
+            ),
+            updated_at=(
+                datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None
+            ),
         )
 
     def _row_to_conversion(self, row: sqlite3.Row) -> SigmaConversion:
@@ -492,7 +605,11 @@ class SigmaDatabase:
         return SigmaConversion(
             id=row["id"],
             name=row["name"],
-            conversion_type=ConversionType(row["conversion_type"]) if row["conversion_type"] else ConversionType.SIGMA_TO_SPL,
+            conversion_type=(
+                ConversionType(row["conversion_type"])
+                if row["conversion_type"]
+                else ConversionType.SIGMA_TO_SPL
+            ),
             profile_id=row["profile_id"],
             input_content=row["input_content"],
             output_sigma=row["output_sigma"],
@@ -502,7 +619,9 @@ class SigmaDatabase:
             health_checks=row["health_checks"],
             correlation_notes=row["correlation_notes"],
             llm_used=bool(row["llm_used"]),
-            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+            created_at=(
+                datetime.fromisoformat(row["created_at"]) if row["created_at"] else None
+            ),
         )
 
     def _row_to_sysmon_config(self, row: sqlite3.Row) -> SysmonConfig:
@@ -517,8 +636,12 @@ class SigmaDatabase:
             rules_json=row["rules_json"],
             raw_xml=row["raw_xml"],
             is_active=bool(row["is_active"]),
-            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
-            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
+            created_at=(
+                datetime.fromisoformat(row["created_at"]) if row["created_at"] else None
+            ),
+            updated_at=(
+                datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None
+            ),
         )
 
     def _row_to_audit_config(self, row: sqlite3.Row) -> WindowsAuditConfig:
@@ -529,8 +652,12 @@ class SigmaDatabase:
             categories_json=row["categories_json"],
             raw_content=row["raw_content"],
             is_active=bool(row["is_active"]),
-            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
-            updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
+            created_at=(
+                datetime.fromisoformat(row["created_at"]) if row["created_at"] else None
+            ),
+            updated_at=(
+                datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None
+            ),
         )
 
     # ========== Sysmon Config Methods ==========
@@ -540,30 +667,46 @@ class SigmaDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             if config.id:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     UPDATE sysmon_configs SET
                         name = ?, version = ?, schema_version = ?,
                         enabled_event_ids = ?, disabled_event_ids = ?,
                         rules_json = ?, raw_xml = ?, is_active = ?,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
-                """, (
-                    config.name, config.version, config.schema_version,
-                    config.enabled_event_ids, config.disabled_event_ids,
-                    config.rules_json, config.raw_xml, 1 if config.is_active else 0,
-                    config.id
-                ))
+                """,
+                    (
+                        config.name,
+                        config.version,
+                        config.schema_version,
+                        config.enabled_event_ids,
+                        config.disabled_event_ids,
+                        config.rules_json,
+                        config.raw_xml,
+                        1 if config.is_active else 0,
+                        config.id,
+                    ),
+                )
             else:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO sysmon_configs
                     (name, version, schema_version, enabled_event_ids, disabled_event_ids,
                      rules_json, raw_xml, is_active)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    config.name, config.version, config.schema_version,
-                    config.enabled_event_ids, config.disabled_event_ids,
-                    config.rules_json, config.raw_xml, 1 if config.is_active else 0
-                ))
+                """,
+                    (
+                        config.name,
+                        config.version,
+                        config.schema_version,
+                        config.enabled_event_ids,
+                        config.disabled_event_ids,
+                        config.rules_json,
+                        config.raw_xml,
+                        1 if config.is_active else 0,
+                    ),
+                )
                 config.id = cursor.lastrowid
             conn.commit()
             return config
@@ -587,7 +730,9 @@ class SigmaDatabase:
         """Get the currently active Sysmon configuration."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM sysmon_configs WHERE is_active = 1 ORDER BY updated_at DESC LIMIT 1")
+            cursor.execute(
+                "SELECT * FROM sysmon_configs WHERE is_active = 1 ORDER BY updated_at DESC LIMIT 1"
+            )
             row = cursor.fetchone()
             return self._row_to_sysmon_config(row) if row else None
 
@@ -596,7 +741,9 @@ class SigmaDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("UPDATE sysmon_configs SET is_active = 0")
-            cursor.execute("UPDATE sysmon_configs SET is_active = 1 WHERE id = ?", (config_id,))
+            cursor.execute(
+                "UPDATE sysmon_configs SET is_active = 1 WHERE id = ?", (config_id,)
+            )
             conn.commit()
             return cursor.rowcount > 0
 
@@ -615,24 +762,35 @@ class SigmaDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             if config.id:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     UPDATE windows_audit_configs SET
                         name = ?, categories_json = ?, raw_content = ?,
                         is_active = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
-                """, (
-                    config.name, config.categories_json, config.raw_content,
-                    1 if config.is_active else 0, config.id
-                ))
+                """,
+                    (
+                        config.name,
+                        config.categories_json,
+                        config.raw_content,
+                        1 if config.is_active else 0,
+                        config.id,
+                    ),
+                )
             else:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO windows_audit_configs
                     (name, categories_json, raw_content, is_active)
                     VALUES (?, ?, ?, ?)
-                """, (
-                    config.name, config.categories_json, config.raw_content,
-                    1 if config.is_active else 0
-                ))
+                """,
+                    (
+                        config.name,
+                        config.categories_json,
+                        config.raw_content,
+                        1 if config.is_active else 0,
+                    ),
+                )
                 config.id = cursor.lastrowid
             conn.commit()
             return config
@@ -641,14 +799,18 @@ class SigmaDatabase:
         """Get all Windows Audit configurations."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM windows_audit_configs ORDER BY created_at DESC")
+            cursor.execute(
+                "SELECT * FROM windows_audit_configs ORDER BY created_at DESC"
+            )
             return [self._row_to_audit_config(row) for row in cursor.fetchall()]
 
     def get_audit_config(self, config_id: int) -> Optional[WindowsAuditConfig]:
         """Get a specific Windows Audit configuration."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM windows_audit_configs WHERE id = ?", (config_id,))
+            cursor.execute(
+                "SELECT * FROM windows_audit_configs WHERE id = ?", (config_id,)
+            )
             row = cursor.fetchone()
             return self._row_to_audit_config(row) if row else None
 
@@ -656,7 +818,9 @@ class SigmaDatabase:
         """Get the currently active Windows Audit configuration."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM windows_audit_configs WHERE is_active = 1 ORDER BY updated_at DESC LIMIT 1")
+            cursor.execute(
+                "SELECT * FROM windows_audit_configs WHERE is_active = 1 ORDER BY updated_at DESC LIMIT 1"
+            )
             row = cursor.fetchone()
             return self._row_to_audit_config(row) if row else None
 
@@ -665,7 +829,10 @@ class SigmaDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("UPDATE windows_audit_configs SET is_active = 0")
-            cursor.execute("UPDATE windows_audit_configs SET is_active = 1 WHERE id = ?", (config_id,))
+            cursor.execute(
+                "UPDATE windows_audit_configs SET is_active = 1 WHERE id = ?",
+                (config_id,),
+            )
             conn.commit()
             return cursor.rowcount > 0
 
@@ -673,22 +840,35 @@ class SigmaDatabase:
         """Delete a Windows Audit configuration."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM windows_audit_configs WHERE id = ?", (config_id,))
+            cursor.execute(
+                "DELETE FROM windows_audit_configs WHERE id = ?", (config_id,)
+            )
             conn.commit()
             return cursor.rowcount > 0
 
     # ========== Log Coverage Check Methods ==========
 
-    def check_log_coverage(self, required_event_ids: List[int], required_category: str = None) -> Dict[str, Any]:
+    def check_log_coverage(
+        self, required_event_ids: List[int], required_category: str = None
+    ) -> Dict[str, Any]:
         """
         Check if the active Sysmon/Audit configs cover the required log sources.
         Returns coverage status and gaps.
         """
         result = {
-            "sysmon_coverage": {"available": False, "enabled_ids": [], "missing_ids": [], "covered": False},
-            "audit_coverage": {"available": False, "enabled_policies": [], "covered": False},
+            "sysmon_coverage": {
+                "available": False,
+                "enabled_ids": [],
+                "missing_ids": [],
+                "covered": False,
+            },
+            "audit_coverage": {
+                "available": False,
+                "enabled_policies": [],
+                "covered": False,
+            },
             "overall_covered": False,
-            "recommendations": []
+            "recommendations": [],
         }
 
         # Check Sysmon coverage
@@ -710,14 +890,15 @@ class SigmaDatabase:
         audit_config = self.get_active_audit_config()
         if audit_config:
             result["audit_coverage"]["available"] = True
-            result["audit_coverage"]["enabled_policies"] = audit_config.get_enabled_subcategories()
+            result["audit_coverage"][
+                "enabled_policies"
+            ] = audit_config.get_enabled_subcategories()
             # For now, just mark as covered if audit config exists
             result["audit_coverage"]["covered"] = True
 
         # Overall coverage
-        result["overall_covered"] = (
-            result["sysmon_coverage"]["covered"] or
-            (result["audit_coverage"]["available"] and not required_event_ids)
+        result["overall_covered"] = result["sysmon_coverage"]["covered"] or (
+            result["audit_coverage"]["available"] and not required_event_ids
         )
 
         if not sysmon_config and not audit_config:

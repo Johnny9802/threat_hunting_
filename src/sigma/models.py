@@ -1,4 +1,5 @@
 """Database models for Sigma Translator module."""
+
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -21,6 +22,7 @@ class MappingStatus(str, Enum):
 @dataclass
 class Profile:
     """Profile for Sigma to SPL conversion settings."""
+
     id: Optional[int] = None
     name: str = ""
     description: Optional[str] = None
@@ -58,6 +60,7 @@ class Profile:
 @dataclass
 class FieldMapping:
     """Field mapping for Sigma to Splunk field conversion."""
+
     id: Optional[int] = None
     profile_id: int = 0
     sigma_field: str = ""
@@ -74,7 +77,11 @@ class FieldMapping:
             "profile_id": self.profile_id,
             "sigma_field": self.sigma_field,
             "target_field": self.target_field,
-            "status": self.status.value if isinstance(self.status, MappingStatus) else self.status,
+            "status": (
+                self.status.value
+                if isinstance(self.status, MappingStatus)
+                else self.status
+            ),
             "category": self.category,
             "notes": self.notes,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -85,6 +92,7 @@ class FieldMapping:
 @dataclass
 class SigmaConversion:
     """Conversion history entry."""
+
     id: Optional[int] = None
     name: str = ""
     conversion_type: ConversionType = ConversionType.SIGMA_TO_SPL
@@ -118,7 +126,11 @@ class SigmaConversion:
         return {
             "id": self.id,
             "name": self.name,
-            "conversion_type": self.conversion_type.value if isinstance(self.conversion_type, ConversionType) else self.conversion_type,
+            "conversion_type": (
+                self.conversion_type.value
+                if isinstance(self.conversion_type, ConversionType)
+                else self.conversion_type
+            ),
             "profile_id": self.profile_id,
             "input_content": self.input_content,
             "output_sigma": self.output_sigma,
@@ -135,6 +147,7 @@ class SigmaConversion:
 @dataclass
 class SigmaSetting:
     """Application setting."""
+
     id: Optional[int] = None
     key: str = ""
     value: str = ""
@@ -152,6 +165,7 @@ class SigmaSetting:
 @dataclass
 class SysmonConfig:
     """Sysmon configuration with enabled Event IDs and fields."""
+
     id: Optional[int] = None
     name: str = ""
     version: str = ""
@@ -206,6 +220,7 @@ class SysmonConfig:
 @dataclass
 class WindowsAuditConfig:
     """Windows Audit Policy configuration."""
+
     id: Optional[int] = None
     name: str = ""
     categories_json: str = ""  # JSON array of category objects

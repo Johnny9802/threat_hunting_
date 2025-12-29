@@ -1,4 +1,5 @@
 """Sigma parsing and repository service."""
+
 import yaml
 import os
 from pathlib import Path
@@ -132,7 +133,9 @@ class SigmaService:
         except Exception:
             return None
 
-    def parse_yaml(self, yaml_content: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    def parse_yaml(
+        self, yaml_content: str
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         """Parse YAML content and validate it's a Sigma rule."""
         try:
             docs = list(yaml.safe_load_all(yaml_content))

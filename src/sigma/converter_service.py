@@ -1,4 +1,5 @@
 """Sigma to SPL conversion service."""
+
 import re
 import yaml
 from typing import Dict, Any, List, Optional, Tuple
@@ -428,7 +429,9 @@ class ConverterService:
         index_override: Optional[str] = None,
         sourcetype_override: Optional[str] = None,
         time_range: Optional[str] = None,
-    ) -> Tuple[str, List[MappingResult], PrerequisiteInfo, List[GapItem], List[HealthCheck]]:
+    ) -> Tuple[
+        str, List[MappingResult], PrerequisiteInfo, List[GapItem], List[HealthCheck]
+    ]:
         """
         Convert a Sigma rule to SPL query.
 
@@ -469,11 +472,11 @@ class ConverterService:
 
         # Build base search
         spl_parts = []
-        spl_parts.append(f'index={index}')
+        spl_parts.append(f"index={index}")
         if sourcetype != "*":
             spl_parts.append(f'sourcetype="{sourcetype}"')
         if eventcode:
-            spl_parts.append(f'EventCode={eventcode}')
+            spl_parts.append(f"EventCode={eventcode}")
 
         # Process detection
         detection = rule.get("detection", {})
@@ -526,7 +529,7 @@ class ConverterService:
 
         # Add time range if specified
         if time_range:
-            spl = f"{spl}\n| where _time >= relative_time(now(), \"{time_range}\")"
+            spl = f'{spl}\n| where _time >= relative_time(now(), "{time_range}")'
 
         # Generate mapping results
         for field in used_fields:
@@ -608,7 +611,7 @@ class ConverterService:
     ) -> Optional[str]:
         """Create a single field condition for SPL."""
         if value is None:
-            return f'isnull({field})'
+            return f"isnull({field})"
 
         # Handle modifiers
         is_contains = "contains" in modifiers
@@ -623,7 +626,7 @@ class ConverterService:
         if isinstance(value, bool):
             return f'{field}={"true" if value else "false"}'
         elif isinstance(value, (int, float)):
-            return f'{field}={value}'
+            return f"{field}={value}"
         elif isinstance(value, str):
             # Escape special characters for SPL
             escaped = self._escape_spl_value(value)
@@ -689,17 +692,17 @@ class ConverterService:
         # Replace block names with their SPL equivalents
         for name, clause in sorted(where_clauses, key=lambda x: -len(x[0])):
             # Use word boundaries to avoid partial replacements
-            pattern = r'\b' + re.escape(name) + r'\b'
+            pattern = r"\b" + re.escape(name) + r"\b"
             result = re.sub(pattern, f"({clause})", result)
 
         # Convert Sigma operators to SPL
-        result = re.sub(r'\band\b', 'AND', result, flags=re.IGNORECASE)
-        result = re.sub(r'\bor\b', 'OR', result, flags=re.IGNORECASE)
-        result = re.sub(r'\bnot\b', 'NOT', result, flags=re.IGNORECASE)
+        result = re.sub(r"\band\b", "AND", result, flags=re.IGNORECASE)
+        result = re.sub(r"\bor\b", "OR", result, flags=re.IGNORECASE)
+        result = re.sub(r"\bnot\b", "NOT", result, flags=re.IGNORECASE)
 
         # Handle 1/all of patterns
-        result = re.sub(r'1 of (\w+)\*', r'(\1)', result)
-        result = re.sub(r'all of (\w+)\*', r'(\1)', result)
+        result = re.sub(r"1 of (\w+)\*", r"(\1)", result)
+        result = re.sub(r"all of (\w+)\*", r"(\1)", result)
 
         return result
 
@@ -718,22 +721,26 @@ class ConverterService:
         if eventcode:
             if isinstance(eventcode, int):
                 info = self.EVENT_INFO.get(eventcode, {})
-                event_ids.append({
-                    "id": eventcode,
-                    "name": info.get("name", "Unknown"),
-                    "source": info.get("source", "Unknown"),
-                })
+                event_ids.append(
+                    {
+                        "id": eventcode,
+                        "name": info.get("name", "Unknown"),
+                        "source": info.get("source", "Unknown"),
+                    }
+                )
             elif isinstance(eventcode, str):
                 # Parse multiple event codes
-                codes = re.findall(r'\d+', str(eventcode))
+                codes = re.findall(r"\d+", str(eventcode))
                 for code in codes:
                     code_int = int(code)
                     info = self.EVENT_INFO.get(code_int, {})
-                    event_ids.append({
-                        "id": code_int,
-                        "name": info.get("name", "Unknown"),
-                        "source": info.get("source", "Unknown"),
-                    })
+                    event_ids.append(
+                        {
+                            "id": code_int,
+                            "name": info.get("name", "Unknown"),
+                            "source": info.get("source", "Unknown"),
+                        }
+                    )
 
         # Channels
         channels = []
@@ -749,7 +756,9 @@ class ConverterService:
         # Configuration requirements
         configuration = []
         if category == "process_creation":
-            configuration.append("Enable command line logging (GPO required for EventID 4688)")
+            configuration.append(
+                "Enable command line logging (GPO required for EventID 4688)"
+            )
             configuration.append("Sysmon installed and configured (for EventID 1)")
         elif category == "network_connection":
             configuration.append("Sysmon with network logging enabled")
@@ -757,7 +766,9 @@ class ConverterService:
             configuration.append("Sysmon v10+ with DNS logging enabled")
 
         # Generate detailed required_logs
-        required_logs = self._determine_required_logs(product, service, category, event_ids)
+        required_logs = self._determine_required_logs(
+            product, service, category, event_ids
+        )
 
         return PrerequisiteInfo(
             log_source={
@@ -825,36 +836,41 @@ class ConverterService:
             if log_info:
                 # Filter event_ids for this specific log source
                 source_event_ids = [
-                    evt for evt in event_ids
-                    if evt.get("source", "").lower() == key or
-                    (key == "sysmon" and evt.get("source") == "Sysmon") or
-                    (key == "security" and evt.get("source") == "Security") or
-                    (key == "powershell" and evt.get("source") == "PowerShell") or
-                    (key == "firewall" and evt.get("source") == "Firewall")
+                    evt
+                    for evt in event_ids
+                    if evt.get("source", "").lower() == key
+                    or (key == "sysmon" and evt.get("source") == "Sysmon")
+                    or (key == "security" and evt.get("source") == "Security")
+                    or (key == "powershell" and evt.get("source") == "PowerShell")
+                    or (key == "firewall" and evt.get("source") == "Firewall")
                 ]
 
-                required_logs.append(RequiredLogSource(
-                    name=log_info["name"],
-                    description=log_info["description"],
-                    windows_channel=log_info.get("windows_channel"),
-                    splunk_sourcetype=log_info.get("splunk_sourcetype"),
-                    event_ids=source_event_ids,
-                    setup_instructions=log_info.get("setup_instructions", []),
-                ))
+                required_logs.append(
+                    RequiredLogSource(
+                        name=log_info["name"],
+                        description=log_info["description"],
+                        windows_channel=log_info.get("windows_channel"),
+                        splunk_sourcetype=log_info.get("splunk_sourcetype"),
+                        event_ids=source_event_ids,
+                        setup_instructions=log_info.get("setup_instructions", []),
+                    )
+                )
 
         # If no specific logs found, provide a generic recommendation
         if not required_logs and product == "windows":
             # Default to Sysmon for Windows
             sysmon_info = self.LOG_SOURCE_INFO.get("sysmon")
             if sysmon_info:
-                required_logs.append(RequiredLogSource(
-                    name=sysmon_info["name"],
-                    description=sysmon_info["description"],
-                    windows_channel=sysmon_info.get("windows_channel"),
-                    splunk_sourcetype=sysmon_info.get("splunk_sourcetype"),
-                    event_ids=event_ids,
-                    setup_instructions=sysmon_info.get("setup_instructions", []),
-                ))
+                required_logs.append(
+                    RequiredLogSource(
+                        name=sysmon_info["name"],
+                        description=sysmon_info["description"],
+                        windows_channel=sysmon_info.get("windows_channel"),
+                        splunk_sourcetype=sysmon_info.get("splunk_sourcetype"),
+                        event_ids=event_ids,
+                        setup_instructions=sysmon_info.get("setup_instructions", []),
+                    )
+                )
 
         return required_logs
 
@@ -870,7 +886,7 @@ class ConverterService:
         health_checks = []
 
         # Check log source exists
-        base_search = f'index={index}'
+        base_search = f"index={index}"
         if sourcetype != "*":
             base_search += f' sourcetype="{sourcetype}"'
 
@@ -878,7 +894,7 @@ class ConverterService:
             HealthCheck(
                 name="Log Source Exists",
                 description="Verify that the log source is receiving data",
-                query=f'{base_search} earliest=-1h | head 1 | stats count',
+                query=f"{base_search} earliest=-1h | head 1 | stats count",
             )
         )
 
@@ -888,7 +904,7 @@ class ConverterService:
                 HealthCheck(
                     name=f"EventCode {eventcode} Present",
                     description="Verify that the required EventCode is being logged",
-                    query=f'{base_search} EventCode={eventcode} earliest=-24h | stats count',
+                    query=f"{base_search} EventCode={eventcode} earliest=-24h | stats count",
                 )
             )
 
@@ -899,7 +915,7 @@ class ConverterService:
                     HealthCheck(
                         name=f'Field "{mapping.target_field}" Exists',
                         description=f"Verify that field {mapping.target_field} (mapped from {mapping.sigma_field}) exists",
-                        query=f'{base_search} earliest=-1h | where isnotnull({mapping.target_field}) | head 1 | stats count',
+                        query=f"{base_search} earliest=-1h | where isnotnull({mapping.target_field}) | head 1 | stats count",
                     )
                 )
 
@@ -924,27 +940,31 @@ class ConverterService:
 
         # Check for complex SPL features
         complex_features = []
-        if re.search(r'\|\s*join\b', spl, re.IGNORECASE):
-            complex_features.append("join command - correlation logic cannot be fully represented")
-        if re.search(r'\|\s*transaction\b', spl, re.IGNORECASE):
+        if re.search(r"\|\s*join\b", spl, re.IGNORECASE):
+            complex_features.append(
+                "join command - correlation logic cannot be fully represented"
+            )
+        if re.search(r"\|\s*transaction\b", spl, re.IGNORECASE):
             complex_features.append("transaction command - multi-event correlation")
-        if re.search(r'\|\s*stats\b.*\bby\b', spl, re.IGNORECASE):
+        if re.search(r"\|\s*stats\b.*\bby\b", spl, re.IGNORECASE):
             complex_features.append("stats aggregation - converted to basic detection")
-        if re.search(r'\|\s*lookup\b', spl, re.IGNORECASE):
+        if re.search(r"\|\s*lookup\b", spl, re.IGNORECASE):
             complex_features.append("lookup command - external data reference")
 
         if complex_features:
             correlation_notes = "Complex SPL features detected:\n" + "\n".join(
                 f"- {f}" for f in complex_features
             )
-            correlation_notes += "\n\nConsider using Sigma correlation rules for full functionality."
+            correlation_notes += (
+                "\n\nConsider using Sigma correlation rules for full functionality."
+            )
 
         # Parse index and sourcetype
         logsource = {"product": "windows"}
 
-        index_match = re.search(r'index\s*=\s*(\S+)', spl)
+        index_match = re.search(r"index\s*=\s*(\S+)", spl)
         if index_match:
-            index = index_match.group(1).strip('"\'')
+            index = index_match.group(1).strip("\"'")
             if "linux" in index.lower():
                 logsource["product"] = "linux"
 
@@ -959,7 +979,7 @@ class ConverterService:
                 logsource["service"] = "powershell"
 
         # Parse EventCode
-        eventcode_match = re.search(r'EventCode\s*=\s*(\d+)', spl, re.IGNORECASE)
+        eventcode_match = re.search(r"EventCode\s*=\s*(\d+)", spl, re.IGNORECASE)
         detection = {"selection": {}, "condition": "selection"}
 
         if eventcode_match:
@@ -983,9 +1003,7 @@ class ConverterService:
 
         # Parse field conditions from where clause
         where_matches = re.findall(
-            r'(?:match|like)\s*\(\s*(\w+)\s*,\s*["\']([^"\']+)["\']',
-            spl,
-            re.IGNORECASE
+            r'(?:match|like)\s*\(\s*(\w+)\s*,\s*["\']([^"\']+)["\']', spl, re.IGNORECASE
         )
         for field, pattern in where_matches:
             # Clean up the pattern
